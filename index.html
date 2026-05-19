@@ -15,15 +15,16 @@
         .input-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:20px; }
         .form-group { position:relative; }
         .form-group label { display:block; font-size:13px; color:var(--text-secondary); margin-bottom:6px; font-weight:500; }
-        select, input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:#FAFAFA; transition:all 0.2s ease; color:var(--text-primary); }
-        select:focus, input:focus { outline:none; border-color:var(--primary); background:#FFF; box-shadow:0 0 0 3px var(--primary-light); }
+        select, input { width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:#FAFAFA; transition:border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease; color:var(--text-primary); }
+        select:focus-visible, input:focus-visible { outline:2px solid var(--primary); outline-offset:1px; border-color:var(--primary); background:#FFF; box-shadow:0 0 0 3px var(--primary-light); }
+select:focus:not(:focus-visible), input:focus:not(:focus-visible) { outline:none; border-color:var(--primary); background:#FFF; box-shadow:0 0 0 3px var(--primary-light); }
         select:disabled { background:#F5F7FA; color:var(--text-primary); cursor:default; border-color:#E5E6EB; -webkit-appearance:none; -moz-appearance:none; appearance:none; background-image:none; opacity:0.7; }
         input::placeholder { color:#86909C; opacity:1; }
         /* 隐藏数字输入框的调拨按钮 */
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
         input[type=number] { -moz-appearance:textfield; }
-        .btn-primary { width:100%; padding:11px; background:var(--primary); color:#FFF; border:none; border-radius:8px; font-size:15px; font-weight:500; cursor:pointer; transition:all 0.2s ease; margin-bottom:20px; }
+        .btn-primary { width:100%; padding:13px; background:var(--primary); color:#FFF; border:none; border-radius:8px; font-size:15px; font-weight:500; cursor:pointer; transition:background 0.2s ease, transform 0.2s ease, opacity 0.2s ease; margin-bottom:20px; }
         .btn-primary:hover { background:var(--primary-hover); transform:translateY(-1px); }
         .btn-primary:active { transform:translateY(0); opacity:0.85; }
         .btn-primary.success { background:#52C41A; }
@@ -39,12 +40,36 @@
         @keyframes warnFadeIn { from{opacity:0;transform:translateY(-6px);max-height:0;padding-top:0;padding-bottom:0;overflow:hidden} to{opacity:1;transform:translateY(0);max-height:80px;padding-top:12px;padding-bottom:12px} }
         .warning-msg::before { content:"⚠️"; font-size:16px; }
         .rules-panel { margin-top:20px; background:#E6F4FF; border-radius:8px; padding:16px 20px; border-left:4px solid var(--primary); }
-        .rules-title { font-size:14px; font-weight:600; color:var(--text-primary); margin-bottom:8px; }
+        .rules-title, h3 { font-size:14px; font-weight:600; color:var(--text-primary); margin:0 0 8px 0; }
         .rules-content { font-size:13px; color:var(--text-body); line-height:1.6; }
         .rules-content ol { padding-left:18px; margin:6px 0; }
         .rules-content li { margin-bottom:4px; }
-        @media(max-width:768px) { .input-grid { grid-template-columns:1fr; } .result-grid { grid-template-columns:1fr; } }
-        #msgBox { text-align:center; color:#CF1322; background:#FFF1F0; border:1px solid #FFA39E; border-radius:8px; padding:10px 16px; display:none; margin-bottom:12px; font-size:14px; font-weight:500; position:relative; }
+
+        /* ===== 线缆厂家白名单面板 ===== */
+        .whitelist-panel { margin-top:20px; background:#E6F4FF; border-left:4px solid var(--primary); border-radius:8px; transition:background 0.25s ease; }
+        .whitelist-panel:hover { background:#DBEAFE; }
+        .whitelist-panel[open] { padding:0 20px 12px; }
+        .whitelist-panel[open]:hover { background:#DBEAFE; }
+        .whitelist-summary { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; cursor:pointer; font-size:14px; font-weight:600; color:var(--text-primary); list-style:none; user-select:none; transition:padding 0.25s ease; }
+        .whitelist-panel[open] .whitelist-summary { padding:14px 0; }
+        .whitelist-summary::-webkit-details-marker { display:none; }
+        .whitelist-summary::after { content:''; display:inline-block; width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:6px solid var(--text-secondary); transition:transform 0.3s ease; flex-shrink:0; margin-left:8px; }
+        .whitelist-panel[open] .whitelist-summary::after { transform:rotate(180deg); }
+        .wl-summary-left { display:inline-flex; align-items:center; gap:8px; }
+        .whitelist-count { font-size:11px; font-weight:400; color:var(--text-secondary); letter-spacing:0.3px; transition:opacity 0.25s ease; }
+        .whitelist-panel[open] .whitelist-count { opacity:0; pointer-events:none; }
+        .whitelist-table { display:grid; grid-template-columns:1fr 1fr; gap:16px; animation:wlFadeIn 0.3s ease; max-height:360px; overflow-y:auto; }
+        @keyframes wlFadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+        .whitelist-col { background:#FFF; border-radius:6px; padding:14px 16px; border:1px solid #D6E4FF; }
+        .whitelist-col h3 { font-size:13px; font-weight:600; color:var(--text-primary); margin:0 0 10px 0; padding-bottom:6px; border-bottom:1px solid #D6E4FF; }
+        .whitelist-col ul { margin:0; padding-left:18px; font-size:13px; color:var(--text-body); line-height:1.9; }
+        .whitelist-col li { margin-bottom:2px; }
+        .whitelist-col li:last-child { margin-bottom:0; }
+        @media(max-width:480px) { .whitelist-table { grid-template-columns:1fr; } }
+
+        @media(max-width:768px) { .input-grid { grid-template-columns:1fr; } .result-grid { grid-template-columns:1fr; } .cascading-wrap.visible { max-height:450px; } }
+        #msgBox { text-align:center; color:#CF1322; background:#FFF1F0; border:1px solid #FFA39E; border-radius:8px; padding:10px 16px; margin-bottom:12px; font-size:14px; font-weight:500; position:relative; opacity:0; transform:translateY(-4px); pointer-events:none; transition:opacity 0.2s ease, transform 0.2s ease; }
+        #msgBox.msg-visible { opacity:1; transform:translateY(0); pointer-events:auto; }
         #msgBox .msg-close { position:absolute; right:10px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:16px; color:#CF1322; background:none; border:none; line-height:1; padding:4px; border-radius:4px; transition:background 0.15s; }
         #msgBox .msg-close:hover { background:rgba(207,19,34,0.08); }
         .form-group.has-error select,
@@ -58,21 +83,23 @@
         @keyframes ratioPulse { 0%{box-shadow:0 0 0 0 rgba(22,119,255,0.3)} 50%{box-shadow:0 0 0 4px rgba(22,119,255,0.15)} 100%{box-shadow:0 0 0 0 rgba(22,119,255,0)} }
         .ratio-hint { font-size:12px; color:var(--text-secondary); margin-top:6px; line-height:1.4; }
         .lock-badge { font-size:11px; opacity:0.6; }
-        .result-copy-btn { font-size:12px; color:var(--primary); cursor:pointer; background:none; border:1px solid var(--primary); border-radius:4px; padding:2px 8px; margin-left:auto; transition:all 0.15s; }
+        .result-copy-btn { font-size:12px; color:var(--primary); cursor:pointer; background:none; border:1px solid var(--primary); border-radius:4px; padding:2px 8px; margin-left:auto; transition:color 0.15s, border-color 0.15s, background 0.15s; }
         .result-copy-btn:hover { background:var(--primary-light); }
         .result-copy-btn.copied { color:#52C41A; border-color:#52C41A; }
         .cable-line { display:block; }
         .cable-label { color:var(--text-secondary); font-weight:400; }
-        @media(prefers-reduced-motion:reduce){ .result-panel{animation:none;} .warning-msg{animation:none;} .cascading select{opacity:1;transition:none;} .search-dropdown.sd-visible{animation:none;} .ratio-flash{animation:none;} }
+        @media(prefers-reduced-motion:reduce){ .result-panel{animation:none;} .warning-msg{animation:none;} .cascading select{opacity:1;transition:none;} .search-dropdown.sd-visible{animation:none;} .ratio-flash{animation:none;} .whitelist-table{animation:none;} #msgBox{transition:none;} }
         /* ===== 小屏断点 ===== */
-        @media(max-width:480px) { body { padding:12px 8px; } .container { padding:16px; } .header h1 { font-size:20px; } .input-grid { grid-template-columns:1fr; gap:12px; } .input-grid .form-group:nth-child(3), .input-grid .form-group:nth-child(6) { grid-column:span 1; } .result-grid { grid-template-columns:1fr; } .form-group label { font-size:14px; } select, input { font-size:16px; } }
+        @media(max-width:480px) { body { padding:12px 8px; } .container { padding:16px; } .header h1 { font-size:20px; } .input-grid { grid-template-columns:1fr; gap:12px; } .input-grid .form-group:nth-child(3), .input-grid .form-group:nth-child(6) { grid-column:span 1; } .result-grid { grid-template-columns:1fr; } .form-group label { font-size:14px; } select, input { font-size:16px; } .cascading-wrap.visible { max-height:500px; } }
     
         /* ===== 搜索框 ===== */
         .search-section { margin-bottom:16px; position:relative; }
         .search-wrapper { position:relative; display:flex; align-items:center; }
-        .search-wrapper input { width:100%; padding:11px 44px 11px 36px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:#FAFAFA; transition:all 0.2s ease; }
+        .search-wrapper input { width:100%; min-height:44px; padding:12px 44px 12px 36px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:#FAFAFA; transition:border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease; }
         .search-wrapper input:focus { outline:none; border-color:var(--primary); background:#FFF; box-shadow:0 0 0 3px var(--primary-light); }
-        .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:15px; color:var(--text-secondary); pointer-events:none; z-index:1; }
+        .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); pointer-events:none; z-index:1; width:16px; height:16px; }
+.search-icon::before { content:''; display:block; width:10px; height:10px; border:2px solid var(--text-secondary); border-radius:50%; position:absolute; top:1px; left:1px; }
+.search-icon::after { content:''; display:block; width:6px; height:2px; background:var(--text-secondary); border-radius:1px; position:absolute; bottom:1px; right:0; transform:rotate(45deg); transform-origin:right center; }
         .search-clear { position:absolute; right:10px; top:50%; transform:translateY(-50%); border:none; background:none; color:#86909C; font-size:18px; line-height:1; cursor:pointer; display:none; transition:color 0.15s; padding:4px; border-radius:4px; }
         .search-clear:hover { color:var(--text-body); background:rgba(0,0,0,0.04); }
 
@@ -93,7 +120,7 @@
         .recent-section { margin-top:10px; display:none; }
         .recent-header { font-size:12px; color:var(--text-secondary); font-weight:500; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; }
         .recent-list { display:flex; flex-wrap:wrap; gap:6px; }
-        .recent-item { display:inline-flex; align-items:center; gap:4px; padding:5px 10px; background:#F5F7FA; border:1px solid var(--border); border-radius:6px; font-size:12px; cursor:pointer; transition:all 0.15s; max-width:100%; }
+        .recent-item { display:inline-flex; align-items:center; gap:4px; padding:5px 10px; background:#F5F7FA; border:1px solid var(--border); border-radius:6px; font-size:12px; cursor:pointer; transition:border-color 0.15s, background 0.15s; max-width:100%; }
         .recent-item > span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:260px; }
         .recent-item:hover { border-color:var(--primary); background:var(--primary-light); }
         .recent-item .ri-del { font-size:14px; color:var(--text-muted); cursor:pointer; line-height:1; padding:0 2px; }
@@ -104,40 +131,40 @@
         /* ===== 展开链接 ===== */
         .expand-link { font-size:12px; color:var(--text-secondary); cursor:pointer; user-select:none; margin-top:10px; display:inline-block; padding:4px 8px; border-radius:4px; transition:background 0.15s; margin-left:2px; }
         .expand-link:hover { background:var(--primary-light); color:var(--text-primary); }
-        .expand-link .expand-arrow { display:inline-block; transition:transform 0.2s; font-size:10px; }
+        .expand-link .expand-arrow { display:inline-block; transition:transform 0.2s; width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid var(--text-secondary); vertical-align:middle; margin-left:2px; font-size:0; }
         .expand-link.expanded .expand-arrow { transform:rotate(180deg); }
 
         /* ===== 折叠级联区 ===== */
         .cascading-wrap { overflow:hidden; transition:max-height 0.3s ease, opacity 0.25s ease; max-height:0; opacity:0; margin-top:6px; }
-        .cascading-wrap.visible { max-height:200px; opacity:1; }
+        .cascading-wrap.visible { max-height:400px; opacity:1; }
         .cascading-wrap .input-grid { margin-bottom:0; }
 
         /* ===== 容配比文本展示 ===== */
-        .ratio-display { width:100%; padding:10px 12px; border:1px solid #E5E6EB; border-radius:8px; font-size:14px; background:#F0F2F5; color:#595959; cursor:default; display:flex; align-items:center; gap:8px; min-height:42px; }
+        .ratio-display { width:100%; padding:11px 12px; border:1px solid #E5E6EB; border-radius:8px; font-size:14px; background:#F0F2F5; color:#595959; cursor:default; display:flex; align-items:center; gap:8px; min-height:44px; }
         .ratio-display .ratio-value { font-weight:600; }
         .ratio-flash { animation:ratioPulse 0.6s ease; }
 
         /* ===== 输入框后缀（片） ===== */
         .input-with-suffix { position:relative; display:flex; align-items:center; width:100%; }
-        .input-with-suffix input { padding-right:36px; }
+        .input-with-suffix input { padding-right:36px; min-height:44px; }
         .input-suffix { position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--text-secondary); font-size:14px; pointer-events:none; line-height:1; }
 
         /* ===== 步骤分区 ===== */
-        .section-step { font-size:15px; font-weight:600; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+        .section-step, h2 { font-size:15px; font-weight:600; color:var(--text-primary); margin:0 0 12px 0; display:flex; align-items:center; gap:8px; }
         .step-badge { display:inline-flex; align-items:center; justify-content:center; background:var(--primary); color:#FFF; font-size:12px; font-weight:600; border-radius:4px; padding:2px 8px; line-height:1.4; }
-        .param-section { background:#F9FAFB; border-radius:8px; padding:20px; margin-top:24px; }
-        .step-card { background:#F9FAFB; border-radius:8px; padding:20px; }
+        .param-section { background:#F0F2F5; border-radius:8px; padding:20px; margin-top:24px; }
+        .step-card { background:#F7F9FB; border-radius:8px; padding:20px; }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header"><h1>组件-逆变器及线缆匹配查询</h1><div class="subtitle">0512更新，支持NEG 715-800W组件，有疑问处请联系南部解决方案部段林钢</div></div>
     <div class="step-card">
-        <div class="section-step" style="margin-bottom:16px;"><span class="step-badge">第一步</span> 确定项目地</div>
+        <h2 style="margin-bottom:16px;"><span class="step-badge">第一步</span> 确定项目地</h2>
         <div class="search-section">
             <div class="form-group">
                 <div class="search-wrapper">
-                    <span class="search-icon">🔍</span>
+                    <span class="search-icon"></span>
                     <input type="text" id="searchInput" placeholder="搜索地区（支持中文/拼音，如：番禺 / gz）" autocomplete="off">
                     <button class="search-clear" id="searchClear">×</button>
                 </div>
@@ -147,7 +174,7 @@
                 <div class="recent-header"><span>最近使用</span><span class="recent-clear" id="recentClear">清空记录</span></div>
                 <div id="recentList" class="recent-list"></div>
             </div>
-            <span class="expand-link" id="expandLink">展开地区选择 <span class="expand-arrow">▼</span></span>
+            <span class="expand-link" id="expandLink">展开地区选择 <span class="expand-arrow"></span></span>
         </div>
         <div class="cascading-wrap" id="cascadingWrap">
         <div class="input-grid">
@@ -158,7 +185,7 @@
     </div>
     </div>
     <div class="param-section">
-        <div class="section-step" style="margin-bottom:18px;"><span class="step-badge">第二步</span> 输入项目参数</div>
+        <h2 style="margin-bottom:18px;"><span class="step-badge">第二步</span> 输入项目参数</h2>
         <div class="input-grid">
             <div class="form-group"><label>容配比 <span class="lock-badge">🔒</span></label><div class="ratio-display" id="ratio"><span class="ratio-value">1.2倍 (正常超配)</span></div><div class="ratio-hint" id="ratioHint">选择区县后自动匹配</div></div>
             <div class="form-group"><label>组件系列</label><select id="series"><option value="">请先选择地区</option></select></div>
@@ -178,8 +205,33 @@
         <div id="gridNote" class="note-section"></div>
         <div id="warningMsg" class="warning-msg"><span>组件总功率超过 100kW 时，并网箱需自行采购，自采元器件需符合公司白名单要求</span></div>
     </div>
+    <details class="whitelist-panel">
+        <summary class="whitelist-summary"><span class="wl-summary-left">线缆厂家白名单 <span class="whitelist-count">交流6家 · 直流4家</span></span></summary>
+        <div class="whitelist-table">
+            <div class="whitelist-col">
+                <h3>交流线厂家白名单</h3>
+                <ul>
+                    <li>江苏上上电缆集团有限公司</li>
+                    <li>无锡市明珠电缆有限公司</li>
+                    <li>远东电缆有限公司</li>
+                    <li>江苏亨通电力电缆有限公司</li>
+                    <li>航天瑞奇电缆有限公司</li>
+                    <li>双登电缆股份有限公司</li>
+                </ul>
+            </div>
+            <div class="whitelist-col">
+                <h3>直流线厂家白名单</h3>
+                <ul>
+                    <li>常州八益电缆股份有限公司</li>
+                    <li>江苏上上电缆集团有限公司</li>
+                    <li>远东电缆有限公司</li>
+                    <li>双登电缆股份有限公司</li>
+                </ul>
+            </div>
+        </div>
+    </details>
     <div class="rules-panel">
-        <div class="rules-title">选型与施工规范</div>
+        <h3 class="rules-title">选型与施工规范</h3>
         <div class="rules-content">
             <ol>
                 <li>逆变器输出线必须使用铜线 (ZR-YJV-0.6/1kV)。</li>
@@ -389,11 +441,11 @@ NEG22_800:{"1.2倍(正常)":[{r:[10,12],inv:"8",box:25},{r:[13,15],inv:"10",box:
 
   function showError(msg) {
     $.msgText.textContent = msg;
-    $.msgBox.style.display = 'block';
+    $.msgBox.classList.add('msg-visible');
     $.resultPanel.style.display = 'none';
   }
 
-  function hideError() { $.msgBox.style.display = 'none'; }
+  function hideError() { $.msgBox.classList.remove('msg-visible'); }
 
   function clearFormErrors() {
     document.querySelectorAll('.form-group.has-error').forEach(el => el.classList.remove('has-error'));
@@ -435,7 +487,7 @@ NEG22_800:{"1.2倍(正常)":[{r:[10,12],inv:"8",box:25},{r:[13,15],inv:"10",box:
 
   function showDataLoadError() {
     $.msgText.textContent = '⚠️ 区域数据加载失败，请刷新页面重试。如持续失败，请联系技术支持。';
-    $.msgBox.style.display = 'block';
+    $.msgBox.classList.add('msg-visible');
     $.queryBtn.disabled = true;
     $.queryBtn.textContent = '数据不可用';
   }
@@ -741,7 +793,7 @@ NEG22_800:{"1.2倍(正常)":[{r:[10,12],inv:"8",box:25},{r:[13,15],inv:"10",box:
     if ($.count.value && !isValidCount(val)) {
       fg.classList.add('has-error');
       $.msgText.textContent = '⚠️ 请输入有效数量（10 ~ 330 片）';
-      $.msgBox.style.display = 'block';
+      $.msgBox.classList.add('msg-visible');
     } else {
       fg.classList.remove('has-error');
       hideError();
@@ -756,6 +808,33 @@ NEG22_800:{"1.2倍(正常)":[{r:[10,12],inv:"8",box:25},{r:[13,15],inv:"10",box:
     return el.textContent.trim();
   }
 
+  function doCopyText(text) {
+    // 优先使用现代 Clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    // Fallback: 使用 textarea + execCommand（兼容非 HTTPS / 旧浏览器）
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) resolve();
+        else reject(new Error('execCommand copy returned false'));
+      } catch (e) {
+        document.body.removeChild(ta);
+        reject(e);
+      }
+    });
+  }
+
   function handleCopy() {
     if ($.resultPanel.style.display === 'none') return;
     const text = [
@@ -767,12 +846,15 @@ NEG22_800:{"1.2倍(正常)":[{r:[10,12],inv:"8",box:25},{r:[13,15],inv:"10",box:
       '• 并网箱配置：' + $.resBox.textContent.trim(),
       '• 并网箱交流铝线：' + extractLines($.resAl)
     ].join('\n');
-    navigator.clipboard.writeText(text).then(() => {
+    doCopyText(text).then(function () {
       $.copyBtn.textContent = '✓ 已复制';
       $.copyBtn.classList.add('copied');
-      setTimeout(() => { $.copyBtn.textContent = '复制结果'; $.copyBtn.classList.remove('copied'); }, 2000);
-    }).catch(() => {
-      showError('⚠️ 复制失败，请手动复制');
+      setTimeout(function () { $.copyBtn.textContent = '复制结果'; $.copyBtn.classList.remove('copied'); }, 2000);
+    }).catch(function () {
+      // 复制失败时，按钮提示但不隐藏结果面板
+      $.copyBtn.textContent = '⚠ 复制失败';
+      $.copyBtn.classList.add('copied');
+      setTimeout(function () { $.copyBtn.textContent = '复制结果'; $.copyBtn.classList.remove('copied'); }, 2000);
     });
   }
 
@@ -897,8 +979,8 @@ NEG22_800:{"1.2倍(正常)":[{r:[10,12],inv:"8",box:25},{r:[13,15],inv:"10",box:
       const isVisible = $.cascadingWrap.classList.toggle('visible');
       this.classList.toggle('expanded');
       this.innerHTML = isVisible
-        ? '收起地区选择 <span class="expand-arrow">▼</span>'
-        : '展开地区选择 <span class="expand-arrow">▼</span>';
+        ? '收起地区选择 <span class="expand-arrow"></span>'
+        : '展开地区选择 <span class="expand-arrow"></span>';
     });
     $.recentClear.addEventListener('click', clearRecentAll);
     $.recentList.addEventListener('click', function (e) {
@@ -917,16 +999,19 @@ NEG22_800:{"1.2倍(正常)":[{r:[10,12],inv:"8",box:25},{r:[13,15],inv:"10",box:
 
   function setupActions() {
     $.queryBtn.addEventListener('click', handleQuery);
-    $.copyBtn.addEventListener('click', handleCopy);
-    $.msgClose.addEventListener('click', () => { $.msgBox.style.display = 'none'; clearFormErrors(); });
+    // 使用 pointerdown 而非 click，确保在 blur/change 之前执行，防止 hideResult 先隐藏面板
+    $.copyBtn.addEventListener('pointerdown', handleCopy);
+    $.msgClose.addEventListener('click', () => { hideError(); clearFormErrors(); });
     $.count.addEventListener('keypress', e => { if (e.key === 'Enter') handleQuery(); });
     $.count.addEventListener('blur', handleCountBlur);
-    $.count.addEventListener('change', hideResult);
     $.count.addEventListener('input', function () {
       this.closest('.form-group').classList.remove('has-error');
       hideError();
     });
-    $.series.addEventListener('change', hideResult);
+    $.series.addEventListener('change', function () {
+      hideResult();
+      // debounceQuery 也在 series change 上注册，由 setupAutoQuery 处理自动查询
+    });
   }
 
   function init() {
