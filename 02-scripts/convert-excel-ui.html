@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel 转换工具 — 容配比数据配置界面</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #1677FF;
+            --primary-hover: #0958D9;
+            --primary-light: rgba(22,119,255,0.08);
+            --bg-page: #F5F7FA;
+            --bg-card: #FFF;
+            --text-primary: #1D2129;
+            --text-secondary: #86909C;
+            --border: #E5E6EB;
+            --success: #52C41A;
+            --success-bg: #F6FFED;
+            --success-border: #B7EB8F;
+            --warn-bg: #FFF7E6;
+            --warn-border: #FFD591;
+            --warn-text: #D48806;
+            --error: #FF4D4F;
+            --error-bg: #FFF2F0;
+            --error-border: #FFCCC7;
+            --radius: 12px;
+            --shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg-page); color: var(--text-primary); line-height: 1.5;
+            padding: 24px 16px;
+        }
+        .container { max-width: 960px; margin: 0 auto; }
+        .card {
+            background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow);
+            padding: 28px; margin-bottom: 20px;
+        }
+        .header { text-align: center; margin-bottom: 28px; }
+        .header h1 { font-size: 24px; font-weight: 600; margin-bottom: 6px; }
+        .header h1 span { background: linear-gradient(90deg, #1677FF, #36BFFA); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .header .subtitle { font-size: 14px; color: var(--text-secondary); }
+
+        /* 文件上传区 */
+        .upload-zone {
+            border: 2px dashed var(--border); border-radius: var(--radius);
+            padding: 40px 20px; text-align: center; cursor: pointer;
+            transition: all 0.25s ease; background: #FAFBFC; position: relative;
+        }
+        .upload-zone:hover { border-color: var(--primary); background: var(--primary-light); }
+        .upload-zone.dragover { border-color: var(--primary); background: var(--primary-light); transform: scale(1.01); }
+        .upload-zone .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.6; }
+        .upload-zone .text-primary { font-size: 15px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
+        .upload-zone .text-hint { font-size: 13px; color: var(--text-secondary); }
+        .upload-zone .file-info {
+            display: none; margin-top: 16px; padding: 12px 16px;
+            background: var(--success-bg); border: 1px solid var(--success-border);
+            border-radius: 8px; font-size: 14px; text-align: left;
+        }
+        .upload-zone .file-info .row { display: flex; justify-content: space-between; padding: 2px 0; }
+        .upload-zone .file-info .label { color: var(--text-secondary); }
+        .upload-zone .file-info .value { font-weight: 500; }
+        #fileInput { display: none; }
+
+        /* 配置表单 */
+        .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 500; }
+        .form-group select, .form-group input {
+            width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+            border-radius: 8px; font-size: 14px; background: #FAFAFA;
+            transition: all 0.2s ease; color: var(--text-primary);
+        }
+        .form-group select:focus, .form-group input:focus {
+            outline: none; border-color: var(--primary); background: #FFF;
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        .form-group select:disabled {
+            background: #F5F7FA; color: var(--text-secondary); cursor: not-allowed;
+        }
+
+        /* 数据预览 */
+        .preview-section { margin-bottom: 20px; }
+        .preview-section .section-title {
+            font-size: 14px; font-weight: 600; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .preview-section .section-title .count { font-size: 12px; color: var(--text-secondary); font-weight: 400; }
+        .preview-table-wrap {
+            max-height: 360px; overflow: auto; border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .preview-table-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .preview-table-wrap th {
+            position: sticky; top: 0; background: #FAFBFC; z-index: 1;
+            padding: 9px 12px; border-bottom: 2px solid var(--border);
+            text-align: left; font-weight: 600; white-space: nowrap;
+        }
+        .preview-table-wrap td { padding: 8px 12px; border-bottom: 1px solid #F0F0F0; }
+        .preview-table-wrap tr:hover td { background: var(--primary-light); }
+        .preview-table-wrap tr.default-row td { background: #FFFBE6; }
+        .preview-table-wrap tr.default-row:hover td { background: #FFF7CC; }
+        .preview-table-wrap .badge {
+            display: inline-block; padding: 1px 8px; border-radius: 4px;
+            font-size: 11px; font-weight: 600;
+        }
+        .badge-province { background: #E6F4FF; color: var(--primary); }
+        .badge-city { background: #F6FFED; color: var(--success); }
+        .badge-district { background: #F5F5F5; color: var(--text-secondary); }
+
+        /* 按钮 */
+        .btn-row { display: flex; gap: 12px; margin-bottom: 20px; }
+        .btn {
+            padding: 11px 24px; border: none; border-radius: 8px; font-size: 15px;
+            font-weight: 500; cursor: pointer; transition: all 0.2s ease;
+            display: flex; align-items: center; gap: 6px; justify-content: center;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+        .btn-primary { background: var(--primary); color: #FFF; flex: 1; }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-success { background: var(--success); color: #FFF; }
+        .btn-success:hover:not(:disabled) { background: #389E0D; transform: translateY(-1px); }
+        .btn-success:disabled { display: none; }
+        .btn-outline { background: #FFF; color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-outline:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+
+        /* 日志面板 */
+        .log-panel {
+            display: none; background: #1D2129; border-radius: 8px;
+            padding: 16px; font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+            font-size: 13px; line-height: 1.7; max-height: 400px;
+            overflow-y: auto; margin-bottom: 20px; white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .log-panel .log-info { color: #B0BEC5; }
+        .log-panel .log-success { color: #69DB7C; }
+        .log-panel .log-warn { color: #FFD93D; }
+        .log-panel .log-error { color: #FF6B6B; }
+        .log-panel .log-highlight { color: #74C0FC; }
+        .log-panel .log-divider { color: #495057; }
+
+        /* 统计卡片 */
+        .stats-grid { display: none; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+        .stat-card {
+            background: #F9FAFB; border: 1px solid var(--border); border-radius: 8px;
+            padding: 14px; text-align: center;
+        }
+        .stat-card .stat-value { font-size: 22px; font-weight: 700; color: var(--primary); }
+        .stat-card .stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+        /* 消息提示 */
+        .msg-box {
+            display: none; padding: 12px 16px; border-radius: 8px;
+            font-size: 14px; margin-bottom: 16px; font-weight: 500;
+        }
+        .msg-box.error { display: block; background: var(--error-bg); border: 1px solid var(--error-border); color: var(--error); }
+        .msg-box.success { display: block; background: var(--success-bg); border: 1px solid var(--success-border); color: #389E0D; }
+
+        @media (max-width: 640px) {
+            .config-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .card { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- 标题 -->
+    <div class="header">
+        <h1><span>Excel 转换工具</span></h1>
+        <div class="subtitle">全国容配比数据 → region-data.js · 手动选择文件 + 可视化配置</div>
+        <div class="subtitle" style="color:#D48806;margin-top:4px;font-size:12px;">
+            ⚡ 使用本地 HTTP 服务器打开（如 <code style="background:#F5F5F5;padding:1px 6px;border-radius:3px;">python -m http.server 8080</code>），直接双击文件会因浏览器安全策略导致 CDN 脚本加载失败
+        </div>
+    </div>
+
+    <!-- 步骤1: 选择文件 -->
+    <div class="card">
+        <div class="upload-zone" id="uploadZone">
+            <div class="icon">📂</div>
+            <div class="text-primary">点击选择 Excel 文件，或拖拽到此处</div>
+            <div class="text-hint">支持 .xlsx / .xls 格式的容配比查询表</div>
+            <div class="file-info" id="fileInfo">
+                <div class="row"><span class="label">文件名</span><span class="value" id="fileName"></span></div>
+                <div class="row"><span class="label">文件大小</span><span class="value" id="fileSize"></span></div>
+                <div class="row"><span class="label">Sheet 页</span><span class="value" id="fileSheets"></span></div>
+                <div class="row"><span class="label">数据行</span><span class="value" id="fileRows"></span></div>
+            </div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls">
+        </div>
+    </div>
+
+    <!-- 步骤2: 配置 -->
+    <div class="card" id="configCard" style="display:none;">
+        <div class="config-grid">
+            <div class="form-group">
+                <label>选择 Sheet 页</label>
+                <select id="sheetSelect" onchange="onSheetChange()">
+                    <option value="">-- 请选择 --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>输出文件名</label>
+                <input type="text" id="outputName" value="region-data.js">
+            </div>
+            <div class="form-group">
+                <label>省级默认标记 (城市列)</label>
+                <input type="text" id="provinceMarker" value="A" style="text-transform:uppercase;">
+            </div>
+            <div class="form-group">
+                <label>市级默认标记 (区县列)</label>
+                <input type="text" id="cityMarker" value="A" style="text-transform:uppercase;">
+            </div>
+        </div>
+
+        <!-- 数据预览 -->
+        <div class="preview-section">
+            <div class="section-title">
+                📊 数据预览
+                <span class="count" id="previewCount"></span>
+            </div>
+            <div class="preview-table-wrap">
+                <table>
+                    <thead><tr id="previewHead"></tr></thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 按钮 -->
+        <div class="btn-row">
+            <button class="btn btn-primary" id="runBtn" onclick="runConversion()">▶ 执行转换</button>
+            <button class="btn btn-success" id="downloadBtn" onclick="downloadResult()">⬇ 下载 region-data.js</button>
+            <button class="btn btn-outline" onclick="resetAll()">↻ 重置</button>
+        </div>
+
+        <!-- 消息框 -->
+        <div class="msg-box" id="msgBox"></div>
+
+        <!-- 统计 -->
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <!-- 日志 -->
+        <div class="log-panel" id="logPanel"></div>
+    </div>
+
+</div>
+
+<script>
+// ============================================================
+//  全局状态
+// ============================================================
+let G = {
+    workbook: null,       // XLSX 解析后的 workbook
+    sheetName: '',       // 当前选中的 sheet 名
+    headers: [],         // 表头
+    rows: [],            // 原始数据行（含表头）
+    dataRows: [],        // 数据行（不含表头，过滤空行）
+    provinceMarker: 'A',
+    cityMarker: 'A',
+    result: null,        // 转换结果
+    resultCode: '',      // 生成的 JS 代码
+    fileName: '',        // 原始文件名
+};
+
+// ============================================================
+//  文件上传
+// ============================================================
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+
+uploadZone.addEventListener('click', () => fileInput.click());
+
+uploadZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadZone.classList.add('dragover');
+});
+uploadZone.addEventListener('dragleave', () => {
+    uploadZone.classList.remove('dragover');
+});
+uploadZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) handleFile(files[0]);
+});
+
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) handleFile(e.target.files[0]);
+});
+
+function handleFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['xlsx', 'xls'].includes(ext)) {
+        showMsg('请选择 .xlsx 或 .xls 格式的文件', 'error');
+        return;
+    }
+
+    G.fileName = file.name;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            G.workbook = XLSX.read(data, { type: 'array' });
+            populateSheetSelect();
+            showFileInfo(file);
+            document.getElementById('configCard').style.display = 'block';
+            hideMsg();
+        } catch (err) {
+            showMsg('文件解析失败: ' + err.message, 'error');
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function showFileInfo(file) {
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = formatSize(file.size);
+    document.getElementById('fileSheets').textContent = G.workbook.SheetNames.join(', ');
+    document.getElementById('fileInfo').style.display = 'block';
+}
+
+function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+// ============================================================
+//  Sheet 选择
+// ============================================================
+function populateSheetSelect() {
+    const sel = document.getElementById('sheetSelect');
+    sel.innerHTML = '<option value="">-- 请选择 --</option>';
+    G.workbook.SheetNames.forEach(name => {
+        sel.innerHTML += `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
+    });
+    // 自动优先选择"容配比查询"或"Sheet1"
+    const preferred = G.workbook.SheetNames.find(n => n.includes('容配比') || n === 'Sheet1');
+    if (preferred) { sel.value = preferred; onSheetChange(); }
+    else if (G.workbook.SheetNames.length === 1) { sel.value = G.workbook.SheetNames[0]; onSheetChange(); }
+}
+
+function onSheetChange() {
+    const name = document.getElementById('sheetSelect').value;
+    if (!name) return;
+    G.sheetName = name;
+    loadSheetData(name);
+}
+
+function loadSheetData(name) {
+    const ws = G.workbook.Sheets[name];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    G.headers = rows[0] || [];
+    G.rows = rows;
+    G.dataRows = rows.slice(1).filter(r => r[0] && String(r[0]).trim());
+
+    document.getElementById('fileRows').textContent = G.dataRows.length + ' 行 (含表头 ' + rows.length + ' 行)';
+    document.getElementById('previewCount').textContent = `共 ${G.dataRows.length} 行数据`;
+
+    renderPreview();
+}
+
+// ============================================================
+//  预览表格
+// ============================================================
+function renderPreview() {
+    const head = document.getElementById('previewHead');
+    const body = document.getElementById('previewBody');
+
+    // 表头
+    const headerLabels = ['省/自治区', '城市', '区县', '区域', '并网箱', '逆变器'];
+    head.innerHTML = '';
+    headerLabels.forEach(h => {
+        head.innerHTML += `<th>${escapeHtml(h)}</th>`;
+    });
+    // 加类型列
+    head.innerHTML += '<th style="width:80px;">类型</th>';
+
+    // 数据（最多显示 200 行）
+    const previewRows = G.dataRows.slice(0, 200);
+    body.innerHTML = '';
+    const pMarker = (document.getElementById('provinceMarker').value || 'A').toUpperCase();
+    const cMarker = (document.getElementById('cityMarker').value || 'A').toUpperCase();
+
+    previewRows.forEach(row => {
+        const [province, city, district, region, boxType, invRatio] = row;
+        const isProvinceDefault = String(city).toUpperCase() === pMarker && String(district).toUpperCase() === cMarker;
+        const isCityDefault = String(district).toUpperCase() === cMarker && !isProvinceDefault;
+        const rowClass = isProvinceDefault ? 'default-row' : (isCityDefault ? 'default-row' : '');
+
+        let badge = '<span class="badge badge-district">区县</span>';
+        if (isProvinceDefault) badge = '<span class="badge badge-province">省级默认</span>';
+        else if (isCityDefault) badge = '<span class="badge badge-city">市级默认</span>';
+
+        body.innerHTML += `<tr class="${rowClass}">
+            <td>${escapeHtml(province || '')}</td>
+            <td>${isProvinceDefault ? '<span style="color:#999;">A</span>' : escapeHtml(city || '')}</td>
+            <td>${isProvinceDefault || isCityDefault ? '<span style="color:#999;">a</span>' : escapeHtml(district || '')}</td>
+            <td>${escapeHtml(region || '')}</td>
+            <td>${escapeHtml(boxType || '')}</td>
+            <td>${escapeHtml(invRatio || '')}</td>
+            <td>${badge}</td>
+        </tr>`;
+    });
+
+    if (G.dataRows.length > 200) {
+        body.innerHTML += `<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:16px;">
+            ... 仅显示前 200 行，共 ${G.dataRows.length} 行 ...
+        </td></tr>`;
+    }
+
+    // 实时更新标记
+    G.provinceMarker = pMarker;
+    G.cityMarker = cMarker;
+}
+
+// 配置变化时刷新预览
+document.getElementById('provinceMarker').addEventListener('input', renderPreview);
+document.getElementById('cityMarker').addEventListener('input', renderPreview);
+
+// ============================================================
+//  核心转换逻辑
+// ============================================================
+function runConversion() {
+    if (!G.dataRows.length) {
+        showMsg('请先选择 Excel 文件并加载数据', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ 转换中...';
+
+    const log = document.getElementById('logPanel');
+    log.style.display = 'block';
+    log.innerHTML = '';
+
+    hideMsg();
+    G.resultCode = '';
+    G.result = null;
+
+    try {
+        const pMarker = G.provinceMarker;
+        const cMarker = G.cityMarker;
+        const rows = G.dataRows;
+        const outputName = document.getElementById('outputName').value || 'region-data.js';
+
+        appendLog('📖 读取数据: ' + G.fileName + ' → Sheet: ' + G.sheetName);
+        appendLog('   总行数（含表头）: ' + G.rows.length);
+        appendLog('   数据行: ' + rows.length);
+        appendLog('   省级默认标记: 城市=' + pMarker + ', 区县=' + cMarker);
+        appendLog('');
+
+        // 第一步：分离省级默认行、市级默认行和普通区县行
+        const cityDefaults = {};     // 键: "省份-城市"
+        const provinceDefaults = {}; // 键: "省份"
+        const districtRows = [];
+
+        for (const row of rows) {
+            const [province, city, district, _region, boxType, invRatio] = row;
+            const isDefault = String(district).toUpperCase() === cMarker;
+            if (isDefault) {
+                const isProvinceDefault = String(city).toUpperCase() === pMarker;
+                if (isProvinceDefault) {
+                    provinceDefaults[province] = { box: boxType || '', ratio: invRatio || '' };
+                } else {
+                    const key = `${province}-${city}`;
+                    cityDefaults[key] = { box: boxType || '', ratio: invRatio || '' };
+                }
+            } else {
+                districtRows.push(row);
+            }
+        }
+
+        const provCount = Object.keys(provinceDefaults).length;
+        const cityCount = Object.keys(cityDefaults).length;
+
+        appendLog('   省级默认行: ' + provCount, 'info');
+        appendLog('   市级默认行: ' + cityCount, 'info');
+        appendLog('   区县行: ' + districtRows.length, 'info');
+        appendLog('');
+
+        // 第二步：构建 REGION_DB
+        const regionDb = {};
+        let inheritedFromCity = 0;
+        let inheritedFromProvince = 0;
+        const inheritanceLog = [];
+
+        for (const row of districtRows) {
+            const [province, city, district, _region, boxType, invRatio] = row;
+            const regionKey = `${province}-${city}-${district}`;
+            const cityDefKey = `${province}-${city}`;
+
+            let box = (boxType || '').trim();
+            let ratio = (invRatio || '').trim();
+
+            const inheritance = { from: '', fields: [] };
+
+            // 市级继承
+            const cityDef = cityDefaults[cityDefKey];
+            if (cityDef) {
+                if (!box && cityDef.box) {
+                    box = cityDef.box;
+                    inheritedFromCity++;
+                    inheritance.fields.push('并网箱');
+                }
+                if (!ratio && cityDef.ratio) {
+                    ratio = cityDef.ratio;
+                    inheritedFromCity++;
+                    inheritance.fields.push('逆变器');
+                }
+                if (inheritance.fields.length > 0) inheritance.from = 'city';
+            }
+
+            // 省级继承
+            if (!box || !ratio) {
+                const provDef = provinceDefaults[province];
+                if (provDef) {
+                    if (!box && provDef.box) {
+                        box = provDef.box;
+                        inheritedFromProvince++;
+                        if (inheritance.from !== 'city') {
+                            if (!inheritance.from) inheritance.from = 'province';
+                            inheritance.fields.push('并网箱');
+                        }
+                    }
+                    if (!ratio && provDef.ratio) {
+                        ratio = provDef.ratio;
+                        inheritedFromProvince++;
+                        if (inheritance.from !== 'city') {
+                            if (!inheritance.from) inheritance.from = 'province';
+                            inheritance.fields.push('逆变器');
+                        }
+                    }
+                }
+            }
+
+            regionDb[regionKey] = { b: box, r: ratio };
+            if (inheritance.fields.length > 0) {
+                inheritanceLog.push({ key: regionKey, from: inheritance.from, fields: inheritance.fields });
+            }
+        }
+
+        appendLog('   市级继承填充: ' + inheritedFromCity + ' 个字段', 'success');
+        appendLog('   省级继承填充: ' + inheritedFromProvince + ' 个字段', 'success');
+        appendLog('');
+
+        // 第三步：校验
+        const totalDefaults = provCount + cityCount;
+        const outputCount = Object.keys(regionDb).length;
+
+        appendLog('─'.repeat(50), 'divider');
+        appendLog('  数据校验报告', 'highlight');
+        appendLog('─'.repeat(50), 'divider');
+        appendLog('  Excel 行（含表头）:     ' + G.rows.length);
+        appendLog('  Excel 数据行:           ' + rows.length);
+        appendLog('  ├─ 省级默认行:          ' + provCount);
+        appendLog('  ├─ 市级默认行:          ' + cityCount);
+        appendLog('  └─ 区县行:              ' + districtRows.length);
+        appendLog('  ─────────────────────────────');
+        appendLog('  默认行合计:              ' + totalDefaults);
+        appendLog('  区县行合计:              ' + districtRows.length);
+        appendLog('  输出 REGION_DB 条目数:   ' + outputCount);
+        appendLog('');
+
+        // 字段填充统计
+        let ownBox = 0, ownRatio = 0, emptyBox = 0, emptyRatio = 0;
+        for (const v of Object.values(regionDb)) {
+            if (v.b) ownBox++; else emptyBox++;
+            if (v.r) ownRatio++; else emptyRatio++;
+        }
+        appendLog('  并网箱有值: ' + ownBox + '（自有+继承）');
+        appendLog('  并网箱为空: ' + emptyBox);
+        appendLog('  逆变器有值: ' + ownRatio + '（自有+继承）');
+        appendLog('  逆变器为空: ' + emptyRatio);
+        appendLog('');
+
+        if (rows.length === totalDefaults + districtRows.length && outputCount === districtRows.length) {
+            appendLog('  ✅ 数量校验通过', 'success');
+        } else {
+            appendLog('  ⚠️  数量偏差，请检查 Excel 数据格式', 'warn');
+        }
+
+        // 列出继承详情（抽样）
+        if (inheritanceLog.length > 0) {
+            appendLog('');
+            appendLog('  继承填充示例（前 10 条）:', 'highlight');
+            const samples = inheritanceLog.slice(0, 10);
+            for (const s of samples) {
+                const fromLabel = s.from === 'province' ? '← 省级' : '← 市级';
+                appendLog('    ' + s.key + '  ' + s.fields.join('/') + ' ' + fromLabel, 'info');
+            }
+            if (inheritanceLog.length > 10) {
+                appendLog('    ... 共 ' + inheritanceLog.length + ' 个地区继承了上级默认值', 'info');
+            }
+        }
+
+        // 第四步：生成 JS 代码
+        appendLog('');
+        appendLog('  生成输出文件...', 'highlight');
+        const code = buildOutput(regionDb, outputName);
+        G.resultCode = code;
+        G.result = regionDb;
+
+        appendLog('  ✅ 输出: ' + outputName, 'success');
+        appendLog('  文件大小: ' + formatSize(new Blob([code]).size));
+        appendLog('');
+        appendLog('  🎉 转换完成！点击下方"下载"按钮保存文件', 'success');
+
+        // 显示统计卡片
+        showStats(outputCount, provCount, cityCount, inheritedFromCity + inheritedFromProvince, emptyBox);
+
+        // 显示下载按钮
+        document.getElementById('downloadBtn').style.display = '';
+
+        appendLog('');
+        appendLog('提示：将生成的 ' + outputName + ' 放到项目根目录即可', 'info');
+
+    } catch (err) {
+        appendLog('❌ 转换失败: ' + err.message, 'error');
+        showMsg('转换失败: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '▶ 执行转换';
+    }
+}
+
+function buildOutput(regionDb, outputName) {
+    const keys = Object.keys(regionDb).sort();
+    const lines = [];
+    lines.push('/**');
+    lines.push(' * 区域容配比数据 — 由 convert-excel-ui 生成');
+    lines.push(' * 源文件: ' + G.fileName);
+    lines.push(' * Sheet: ' + G.sheetName);
+    lines.push(' * 生成时间: ' + new Date().toISOString());
+    lines.push(' * 条目数: ' + keys.length);
+    lines.push(' */');
+    lines.push('');
+    lines.push('var REGION_DB = {');
+
+    for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        const { b, r } = regionDb[key];
+        const comma = (i < keys.length - 1) ? ',' : '';
+        lines.push(`"${key}":{b:"${b}",r:"${r}"}${comma}`);
+    }
+
+    lines.push('};');
+    lines.push('');
+    return lines.join('\n');
+}
+
+// ============================================================
+//  日志 / 消息 / 统计
+// ============================================================
+function appendLog(text, type) {
+    const log = document.getElementById('logPanel');
+    const cls = type ? 'log-' + type : 'log-info';
+    log.innerHTML += `<span class="${cls}">${escapeHtml(text)}</span>\n`;
+    log.scrollTop = log.scrollHeight;
+}
+
+function showMsg(text, type) {
+    const box = document.getElementById('msgBox');
+    box.textContent = text;
+    box.className = 'msg-box ' + (type || 'error');
+    box.style.display = 'block';
+}
+
+function hideMsg() {
+    document.getElementById('msgBox').style.display = 'none';
+}
+
+function showStats(outputCount, provCount, cityCount, inheritedCount, emptyBox) {
+    const grid = document.getElementById('statsGrid');
+    grid.style.display = 'grid';
+    grid.innerHTML = `
+        <div class="stat-card"><div class="stat-value">${outputCount}</div><div class="stat-label">输出条目</div></div>
+        <div class="stat-card"><div class="stat-value">${provCount + cityCount}</div><div class="stat-label">默认行</div></div>
+        <div class="stat-card"><div class="stat-value">${inheritedCount}</div><div class="stat-label">继承填充字段</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:${emptyBox > 0 ? '#D48806' : '#52C41A'}">${emptyBox}</div><div class="stat-label">空字段</div></div>
+    `;
+}
+
+// ============================================================
+//  下载
+// ============================================================
+function downloadResult() {
+    if (!G.resultCode) {
+        showMsg('请先执行转换', 'error');
+        return;
+    }
+    const name = document.getElementById('outputName').value || 'region-data.js';
+    const blob = new Blob([G.resultCode], { type: 'text/javascript;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showMsg('✅ 文件已下载: ' + name, 'success');
+}
+
+// ============================================================
+//  重置
+// ============================================================
+function resetAll() {
+    G = {
+        workbook: null, sheetName: '', headers: [], rows: [], dataRows: [],
+        provinceMarker: 'A', cityMarker: 'A', result: null, resultCode: '', fileName: ''
+    };
+    document.getElementById('fileInput').value = '';
+    document.getElementById('fileInfo').style.display = 'none';
+    document.getElementById('configCard').style.display = 'none';
+    document.getElementById('logPanel').style.display = 'none';
+    document.getElementById('logPanel').innerHTML = '';
+    document.getElementById('statsGrid').style.display = 'none';
+    document.getElementById('statsGrid').innerHTML = '';
+    document.getElementById('downloadBtn').style.display = '';
+    hideMsg();
+    uploadZone.classList.remove('dragover');
+}
+
+// ============================================================
+//  工具函数
+// ============================================================
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>

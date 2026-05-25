@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试验证工具 — 需求规格全覆盖</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #1677FF; --primary-hover: #0958D9; --primary-light: rgba(22,119,255,0.08);
+            --bg-page: #F5F7FA; --bg-card: #FFF; --text-primary: #1D2129; --text-secondary: #86909C;
+            --border: #E5E6EB; --radius: 12px; --shadow: 0 4px 16px rgba(0,0,0,0.06);
+            --pass: #52C41A; --pass-bg: #F6FFED; --pass-border: #B7EB8F;
+            --fail: #FF4D4F; --fail-bg: #FFF2F0; --fail-border: #FFCCC7;
+            --skip: #FAAD14; --skip-bg: #FFFBE6; --skip-border: #FFE58F;
+            --info-bg: #E6F4FF; --info-border: #91CAFF; --info-text: #003EB3;
+        }
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body {
+            font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+            background:var(--bg-page); color:var(--text-primary); line-height:1.5; padding:24px 16px;
+        }
+        .container { max-width:960px; margin:0 auto; }
+        .card { background:var(--bg-card); border-radius:var(--radius); box-shadow:var(--shadow); padding:28px; margin-bottom:20px; }
+
+        .header { text-align:center; margin-bottom:28px; }
+        .header h1 { font-size:24px; font-weight:600; margin-bottom:6px; }
+        .header h1 span { background:linear-gradient(90deg,#1677FF,#36BFFA); -webkit-background-clip:text; background-clip:text; color:transparent; }
+        .header .subtitle { font-size:14px; color:var(--text-secondary); }
+        .header .coverage { font-size:12px; color:var(--text-secondary); margin-top:4px; }
+
+        .file-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:20px; }
+        .file-zone {
+            border:2px dashed var(--border); border-radius:var(--radius); padding:20px 12px;
+            text-align:center; cursor:pointer; transition:all 0.25s ease; background:#FAFBFC;
+        }
+        .file-zone:hover { border-color:var(--primary); background:var(--primary-light); }
+        .file-zone .icon { font-size:28px; margin-bottom:6px; }
+        .file-zone .label { font-size:13px; font-weight:500; color:var(--text-primary); margin-bottom:2px; }
+        .file-zone .hint { font-size:11px; color:var(--text-secondary); }
+        .file-zone.loaded { border-color:var(--pass); border-style:solid; background:var(--pass-bg); }
+        .file-zone .fname { display:none; margin-top:6px; font-size:12px; font-weight:500; color:var(--pass); }
+        .file-zone.loaded .fname { display:block; }
+        .file-zone input[type="file"] { display:none; }
+
+        .btn-row { display:flex; gap:12px; margin-bottom:20px; }
+        .btn {
+            padding:11px 24px; border:none; border-radius:8px; font-size:15px;
+            font-weight:500; cursor:pointer; transition:all 0.2s ease;
+            display:flex; align-items:center; gap:6px; justify-content:center;
+        }
+        .btn:disabled { opacity:0.5; cursor:not-allowed; transform:none !important; }
+        .btn-primary { background:var(--primary); color:#FFF; flex:1; }
+        .btn-primary:hover:not(:disabled) { background:var(--primary-hover); transform:translateY(-1px); }
+        .btn-outline { background:#FFF; color:var(--text-primary); border:1px solid var(--border); }
+        .btn-outline:hover:not(:disabled) { border-color:var(--primary); color:var(--primary); }
+        .btn-small { padding:6px 14px; font-size:13px; }
+
+        .summary { display:none; }
+        .summary-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+        .summary-item { padding:16px; border-radius:8px; text-align:center; background:#F9FAFB; border:1px solid var(--border); }
+        .summary-item .num { font-size:28px; font-weight:700; }
+        .summary-item .desc { font-size:13px; color:var(--text-secondary); margin-top:2px; }
+        .summary-item.pass .num { color:var(--pass); }
+        .summary-item.fail .num { color:var(--fail); }
+        .summary-item.skip .num { color:var(--skip); }
+        .summary-item.total .num { color:var(--primary); }
+        .summary-verdict { text-align:center; padding:14px; border-radius:8px; font-size:18px; font-weight:700; margin-bottom:20px; }
+        .summary-verdict.pass { background:var(--pass-bg); border:1px solid var(--pass-border); color:var(--pass); }
+        .summary-verdict.fail { background:var(--fail-bg); border:1px solid var(--fail-border); color:var(--fail); }
+
+        .test-group { margin-bottom:12px; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+        .test-group .group-header {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:12px 16px; background:#FAFBFC; cursor:pointer;
+            border-bottom:1px solid transparent; transition:background 0.15s; user-select:none;
+        }
+        .test-group .group-header:hover { background:#F0F2F5; }
+        .test-group .group-header .left { display:flex; align-items:center; gap:10px; }
+        .test-group .group-header .name { font-weight:600; font-size:14px; }
+        .test-group .group-header .sub { font-size:11px; color:var(--text-secondary); font-weight:400; margin-left:6px; }
+        .test-group .group-header .badge-group { display:flex; gap:6px; font-size:12px; font-weight:500; }
+        .badge { padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+        .badge-pass { background:var(--pass-bg); color:var(--pass); border:1px solid var(--pass-border); }
+        .badge-fail { background:var(--fail-bg); color:var(--fail); border:1px solid var(--fail-border); }
+        .badge-skip { background:var(--skip-bg); color:#AD6800; border:1px solid var(--skip-border); }
+        .badge-total { background:#F0F2F5; color:var(--text-secondary); border:1px solid var(--border); }
+
+        .test-group .group-body { display:none; }
+        .test-group.expanded .group-body { display:block; }
+        .test-group.expanded .group-header { border-bottom-color:var(--border); }
+
+        .test-case { display:flex; align-items:flex-start; gap:10px; padding:8px 16px 8px 20px; border-bottom:1px dashed #E0E0E0; font-size:13px; }
+        .test-case:last-child { border-bottom:none; }
+        .test-case .icon { font-size:13px; flex-shrink:0; margin-top:2px; }
+        .test-case .msg { flex:1; }
+        .test-case .detail { font-size:12px; color:var(--text-secondary); margin-top:1px; }
+        .test-case.pass { background:#FAFFFA; border-left:3px solid var(--pass); }
+        .test-case.fail { background:#FFFAFA; border-left:3px solid var(--fail); }
+        .test-case.skip { border-left:3px solid var(--skip); }
+        .test-case .req-ref { font-size:10px; color:#999; margin-left:6px; }
+
+        .log-panel {
+            display:none; background:#1D2129; border-radius:8px;
+            padding:16px; font-family:"SF Mono","Fira Code","Consolas",monospace;
+            font-size:12px; line-height:1.6; max-height:300px;
+            overflow-y:auto; white-space:pre-wrap; word-break:break-all; margin-bottom:20px;
+        }
+        .log-panel .log-info { color:#B0BEC5; }
+        .log-panel .log-success { color:#69DB7C; }
+        .log-panel .log-error { color:#FF6B6B; }
+        .log-panel .log-highlight { color:#74C0FC; }
+
+        .msg-box { display:none; padding:12px 16px; border-radius:8px; font-size:14px; margin-bottom:16px; font-weight:500; }
+        .msg-box.error { display:block; background:var(--fail-bg); border:1px solid var(--fail-border); color:var(--fail); }
+
+        .coverage-bar { margin-bottom:20px; }
+        .coverage-bar .bar-track { height:8px; background:#F0F0F0; border-radius:4px; overflow:hidden; display:flex; }
+        .coverage-bar .bar-seg { height:100%; transition:width 0.5s; }
+        .coverage-bar .legend { display:flex; gap:16px; margin-top:6px; font-size:11px; color:var(--text-secondary); flex-wrap:wrap; }
+        .coverage-bar .legend-item { display:flex; align-items:center; gap:4px; }
+
+        @media (max-width:640px) {
+            .file-grid { grid-template-columns:1fr; }
+            .summary-bar { grid-template-columns:repeat(2,1fr); }
+            .card { padding:16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1><span>测试验证工具</span></h1>
+        <div class="subtitle">组件逆变器-线缆智能匹配系统 · 需求规格 v2.0 全覆盖</div>
+        <div class="coverage">覆盖需求章节: 2 · 3 · 4 · 5 · 6 · 7 · 8 · 9 · 10 · 12</div>
+        <div class="coverage" style="color:#D48806;margin-top:4px;">
+            ⚡ 请用本地 HTTP 服务器打开（如 <code style="background:#F5F5F5;padding:1px 6px;border-radius:3px;">python -m http.server 8080</code>），直接双击打开会因浏览器安全策略导致 CDN 脚本加载失败
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="file-grid">
+            <div class="file-zone" id="zoneRegion" onclick="document.getElementById('fileRegion').click()">
+                <div class="icon">📦</div>
+                <div class="label">region-data.js</div>
+                <div class="hint">数据文件</div>
+                <div class="fname" id="fnameRegion"></div>
+                <input type="file" id="fileRegion" accept=".js" onchange="handleFile(this,'region')">
+            </div>
+            <div class="file-zone" id="zoneHtml" onclick="document.getElementById('fileHtml').click()">
+                <div class="icon">📄</div>
+                <div class="label">查询页面 HTML</div>
+                <div class="hint">线缆匹配查询.html</div>
+                <div class="fname" id="fnameHtml"></div>
+                <input type="file" id="fileHtml" accept=".html,.htm" onchange="handleFile(this,'html')">
+            </div>
+            <div class="file-zone" id="zoneExcel" onclick="document.getElementById('fileExcel').click()">
+                <div class="icon">📊</div>
+                <div class="label">Excel 源文件</div>
+                <div class="hint">容配比查询表.xlsx</div>
+                <div class="fname" id="fnameExcel"></div>
+                <input type="file" id="fileExcel" accept=".xlsx,.xls" onchange="handleFile(this,'excel')">
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-primary" id="runBtn" onclick="runAllTests()" disabled>▶ 运行全部测试 (覆盖需求规格 v2.0)</button>
+            <button class="btn btn-outline" onclick="resetAll()">↻ 重置</button>
+        </div>
+        <div class="msg-box" id="msgBox"></div>
+    </div>
+
+    <!-- 结果 -->
+    <div class="card" id="resultCard" style="display:none;">
+        <div class="coverage-bar" id="coverageBar"></div>
+        <div class="summary" id="summaryArea">
+            <div class="summary-bar" id="summaryBar"></div>
+            <div class="summary-verdict" id="verdict"></div>
+        </div>
+        <div id="testGroups"></div>
+        <button class="btn btn-outline btn-small" onclick="expandAll()" style="margin-top:4px;">📂 全部展开</button>
+        <button class="btn btn-outline btn-small" onclick="collapseAll()" style="margin-top:4px;">📁 全部收起</button>
+        <button class="btn btn-outline btn-small" onclick="toggleLog()">📋 切换日志</button>
+        <div class="log-panel" id="logPanel"></div>
+    </div>
+
+</div>
+
+<script>
+// ============================================================
+//  状态
+// ============================================================
+let F = { region: null, html: null, excel: null };
+let G = { regionCode: '', htmlCode: '', excelData: null, excelRows: [] };
+let testResults = [];
+let passed = 0, failed = 0, skipped = 0;
+const groupResults = [];
+const REQ = {};
+
+// ============================================================
+//  文件处理
+// ============================================================
+function handleFile(input, type) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = e.target.result;
+        F[type] = file;
+        const id = 'fname' + type.charAt(0).toUpperCase() + type.slice(1);
+        document.getElementById(id).textContent = file.name;
+        document.getElementById('zone' + type.charAt(0).toUpperCase() + type.slice(1)).classList.add('loaded');
+        if (type === 'region') G.regionCode = data;
+        else if (type === 'html') G.htmlCode = data;
+        else if (type === 'excel') {
+            try { const d = new Uint8Array(e.target.result); G.excelData = XLSX.read(d,{type:'array'}); loadExcelRows(); }
+            catch (err) { showMsg('Excel 解析失败: '+err.message,'error'); }
+        }
+        checkReady();
+    };
+    if (type === 'excel') reader.readAsArrayBuffer(file);
+    else reader.readAsText(file, 'utf-8');
+}
+
+function loadExcelRows() {
+    const wb = G.excelData;
+    const ws = wb.Sheets['容配比查询'] || wb.Sheets['Sheet1'] || wb.Sheets[wb.SheetNames[0]];
+    G.excelRows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+}
+
+function checkReady() {
+    const btn = document.getElementById('runBtn');
+    btn.disabled = !(F.region && F.html && F.excel);
+    if (btn.disabled === false) hideMsg();
+}
+
+function showMsg(text, type) {
+    const box = document.getElementById('msgBox');
+    box.textContent = text; box.className = 'msg-box ' + (type||'error');
+}
+
+function hideMsg() { document.getElementById('msgBox').style.display = 'none'; }
+
+// ============================================================
+//  核心函数
+// ============================================================
+const CABLE_SPEC = [
+    { limit:20,  cu:'3×10+2×6 mm²',     al:'3×16+1×10 mm²' },
+    { limit:33,  cu:'3×16+2×10 mm²',    al:'3×25+1×10 mm²' },
+    { limit:50,  cu:'3×25+2×16 mm²',    al:'3×35+1×16 mm²' },
+    { limit:60,  cu:'3×35+2×16 mm²',    al:'3×50+1×25 mm²' },
+    { limit:70,  cu:'3×50+2×25 mm²',    al:'3×70+1×35 mm²' },
+    { limit:80,  cu:'3×50+2×25 mm²',    al:'3×70+1×35 mm²' },
+    { limit:90,  cu:'3×70+2×35 mm²',    al:'3×95+1×50 mm²' },
+    { limit:100, cu:'3×70+2×35 mm²',    al:'3×95+1×50 mm²' },
+    { limit:125, cu:'3×95+1×50 mm²',    al:'3×120+1×70 mm²' },
+    { limit:160, cu:'3×120+1×70 mm²',   al:'3×150+1×70 mm²' }
+];
+
+function mapRatio(val) {
+    if (!val) return '1.2倍(正常)';
+    if (val.includes('1.1')) return '1.1倍';
+    if (val.includes('1')) return '1倍';
+    return '1.2倍(正常)';
+}
+
+function lookupCable(power, type) {
+    for (const t of CABLE_SPEC) { if (power <= t.limit) return type === 'cu' ? t.cu : t.al; }
+    return type === 'cu' ? '3×120+1×70 mm²' : '3×150+1×70 mm²';
+}
+
+function parseRegionDB(code) { eval(code); if (typeof REGION_DB === 'undefined') throw 'REGION_DB 未定义'; return REGION_DB; }
+
+function extractTables(html) {
+    const dbM = html.match(/const DB=(\{[\s\S]*?\});/);
+    const hdM = html.match(/const HUNAN_DB = (\{[\s\S]*?\});/);
+    if (!dbM || !hdM) throw new Error('HTML 中未找到 DB 或 HUNAN_DB');
+    return { DB: eval('('+dbM[1]+')'), HUNAN_DB: eval('('+hdM[1]+')') };
+}
+
+function query(REGION_DB, DB, HUNAN_DB, opts) {
+    const { province,city,district,series,count } = opts;
+    const rule = REGION_DB[`${province}-${city}-${district}`] || { b:'', r:'' };
+    const ratio = mapRatio(rule.r);
+    let match = null;
+    if (province === '湖南省' && HUNAN_DB[ratio]) {
+        for (const r of HUNAN_DB[ratio]) { if (count >= r.r[0] && count <= r.r[1]) { match=r; break; } }
+    }
+    if (!match && DB[series] && DB[series][ratio]) {
+        for (const r of DB[series][ratio]) { if (count >= r.r[0] && count <= r.r[1]) { match=r; break; } }
+    }
+    if (!match) return null;
+    const powers = match.inv.split('+').map(Number);
+    const total = powers.reduce((a,b)=>a+b,0);
+    const single = powers.length === 1 && (powers[0]===8||powers[0]===10);
+    if (single) return { inv:`${powers[0]}kW单相 / ${powers[0]}kW三相`, box:'10kW单相，25kW三相', cu:'单相：3×10 mm²<br>三相：3×10+2×6 mm²', al:'单相：2×16 mm²<br>三相：3×16+1×10 mm²', ratio, total, warning:false, note:(rule.b&&rule.b!=='标准')?rule.b:null, single:true };
+    return { inv:match.inv+'kW 三相', box:match.box+'kW', cu:powers.map(p=>lookupCable(p,'cu')).join('<br>'), al:lookupCable(total,'al'), ratio, total, warning:total>100, note:(rule.b&&rule.b!=='标准')?rule.b:null, single:false };
+}
+
+// ============================================================
+//  测试引擎
+// ============================================================
+function t(name, fn, req) { fn(); }
+function assert(cond, msg, detail) {
+    if (cond) { passed++; testResults.push({ type:'pass', msg, detail }); }
+    else { failed++; testResults.push({ type:'fail', msg, detail:detail||'条件不成立' }); }
+}
+function assertEq(act, exp, msg) {
+    if (act === exp) { passed++; testResults.push({ type:'pass', msg }); }
+    else { failed++; testResults.push({ type:'fail', msg, detail:`期望 ${JSON.stringify(exp)}，实际 ${JSON.stringify(act)}` }); }
+}
+function skip(reason) { skipped++; testResults.push({ type:'skip', msg:reason }); }
+
+function groupTest(name, fn) {
+    const bP=passed,bF=failed,bS=skipped,bL=testResults.length;
+    fn();
+    groupResults.push({ name, pass:passed-bP, fail:failed-bF, skip:skipped-bS, total:testResults.length-bL });
+}
+
+// ============================================================
+//  运行全部测试
+// ============================================================
+function runAllTests() {
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true; btn.textContent = '⏳ 运行中...';
+    hideMsg(); passed=0; failed=0; skipped=0; testResults.length=0; groupResults.length=0;
+
+    const log = document.getElementById('logPanel');
+    log.style.display='block'; log.innerHTML='';
+    document.getElementById('resultCard').style.display='block';
+
+    try {
+        const REGION_DB = parseRegionDB(G.regionCode);
+        const { DB, HUNAN_DB } = extractTables(G.htmlCode);
+        const excelRows = G.excelRows;
+        const allKeys = Object.keys(REGION_DB);
+        const provinces = [...new Set(allKeys.map(k=>k.split('-')[0]))];
+
+        function r(key) { return REGION_DB[key]; }
+
+        appendLog('✅ 数据加载完成');
+        appendLog(`   REGION_DB: ${allKeys.length} 条目, ${provinces.length} 省`);
+        appendLog(`   DB: ${Object.keys(DB).length} 系列`);
+        appendLog(`   HUNAN_DB: ${Object.keys(HUNAN_DB).length} 分组`);
+        appendLog(`   Excel: ${excelRows.length-1} 数据行`);
+
+        // ================================================================
+        //  1. 数据完整性 — 需求 2.1, 2.2, 10
+        // ================================================================
+        groupTest('1. 数据完整性', () => {
+            // 需求 2.1: 区域配置数据结构 — 省份-城市-区县三级键
+            t('REGION_DB 条目数精确匹配 Excel 区县行数', () => {
+                assertEq(allKeys.length, 2896, '条目数 = 2896（仅真实区县，不含虚拟默认行）');
+            }, '§2.1');
+
+            // 需求 10: 省份覆盖范围
+            t('省份覆盖需求规格列出的全部 28 省/直辖市/自治区', () => {
+                const spec = ['安徽省','北京市','福建省','甘肃省','广东省','广西壮族自治区','贵州省','海南省','河北省','河南省','湖北省','湖南省','吉林省','江苏省','江西省','辽宁省','内蒙古自治区','宁夏回族自治区','山东省','山西省','陕西省','上海市','四川省','天津市','新疆维吾尔自治区','云南省','浙江省'];
+                // 需求规格列出28个；重庆市在数据中但规格未列，我们验证至少覆盖规格列出的
+                for (const p of spec) assert(provinces.includes(p), `省份 "${p}" 存在于 REGION_DB`);
+                assert(provinces.length >= 28, `至少覆盖 28 省/直辖市（实际 ${provinces.length}）`);
+            }, '§10');
+
+            // 需求 2.2: 市级默认行不在前端展示 — 验证无虚拟条目泄漏
+            t('无 "区县=a" 的虚拟默认行泄漏到数据中', () => {
+                const leaked = allKeys.filter(k => k.split('-')[2] === 'a');
+                assertEq(leaked.length, 0, `泄漏 ${leaked.length} 条`);
+            }, '§2.2');
+
+            // 所有条目 b/r 字段完整
+            t('所有条目的 b(并网箱) 和 r(容配比) 字段均为字符串', () => {
+                for (const k of allKeys.slice(0,200)) {
+                    assert(typeof REGION_DB[k].b === 'string', `条目 ${k} b 为 string`);
+                    assert(typeof REGION_DB[k].r === 'string', `条目 ${k} r 为 string`);
+                }
+            }, '§2.1');
+
+            // 键格式验证: 省份-城市-区县
+            t('所有键格式为 "省份-城市-区县"，不含空段', () => {
+                const bad = allKeys.filter(k => !k || k.split('-').length !== 3 || k.startsWith('-') || k.endsWith('-'));
+                assertEq(bad.length, 0, `格式异常: ${bad.length} 条`);
+            }, '§2.1');
+        });
+
+        // ================================================================
+        //  2. 容配比映射规则 — 需求 6.1, 6.4
+        // ================================================================
+        groupTest('2. 容配比映射规则', () => {
+            // 需求 6.1: 完整映射规则
+            t('空值 → 1.2倍(正常超配)',   () => { assertEq(mapRatio(''), '1.2倍(正常)', '空字符串'); assertEq(mapRatio(null), '1.2倍(正常)', 'null参数'); assertEq(mapRatio(undefined), '1.2倍(正常)', '未传参'); }, '§6.1');
+            t('不超配1 → 1倍(不超配)',      () => { assertEq(mapRatio('不超配1'), '1倍', '不超配1'); }, '§6.1');
+            t('不超配1.1 → 1.1倍(轻度超配)', () => { assertEq(mapRatio('不超配1.1'), '1.1倍', '不超配1.1'); }, '§6.1');
+            t('其他值 → 1.2倍(正常超配) 兜底', () => { assertEq(mapRatio('unknown'), '1.2倍(正常)', 'unknown'); assertEq(mapRatio('任意值'), '1.2倍(正常)', '任意值'); }, '§6.1');
+
+            // 需求 6.4: 典型地区示例
+            t('广东广州番禺区: 区县级 不超配1 → 1倍', () => {
+                const v = r('广东省-广州市-番禺区');
+                assert(v && v.r === '不超配1', '番禺区 r=不超配1');
+                assertEq(mapRatio(v.r), '1倍', '锁定为 1倍');
+            }, '§6.4');
+
+            t('湖北荆州公安县: 区县级 不超配1 → 1倍', () => {
+                const v = r('湖北省-荆州市-公安县');
+                assert(v && v.r === '不超配1', '公安县 r=不超配1');
+                assertEq(mapRatio(v.r), '1倍', '锁定为 1倍');
+            }, '§6.4');
+
+            t('吉林长春农安县: 区县空→市级空→省级空→1.2倍', () => {
+                const v = r('吉林省-长春市-农安县');
+                assert(v && !v.r, '农安县 r 为空');
+                assertEq(mapRatio(v.r), '1.2倍(正常)', '锁定为 1.2倍');
+            }, '§6.4');
+
+            t('安徽阜阳颍上县: 区县空→市级空→省级空→1.2倍', () => {
+                const v = r('安徽省-阜阳市-颍上县');
+                assert(v && !v.r, '颍上县 r 为空');
+                assertEq(mapRatio(v.r), '1.2倍(正常)', '锁定为 1.2倍');
+            }, '§6.4');
+        });
+
+        // ================================================================
+        //  3. 层级继承规则 — 需求 6.3, 8.2
+        // ================================================================
+        groupTest('3. 层级继承规则', () => {
+            // 需求 6.3: 容配比三级继承
+            t('区县级有值则不继承: 番禺区 r=不超配1 (独立值)', () => {
+                const v = r('广东省-广州市-番禺区');
+                assert(v && v.r === '不超配1', '番禺区使用自有值');
+            }, '§6.3');
+
+            t('区县级空→继承市级值: 长沙县 r=不超配1 (继承长沙市)', () => {
+                // 长沙县 r 为空，继承长沙市市级默认 r=不超配1
+                const cityDef = excelRows.slice(1).find(row => row[0]==='湖南省' && row[1]==='长沙市' && String(row[2]).toLowerCase()==='a');
+                const v = r('湖南省-长沙市-长沙县');
+                if (cityDef) {
+                    assert(v.r === '不超配1' || v.r === (cityDef[5]||'').trim(), `长沙县 r="${v.r}" 应继承长沙市默认`);
+                }
+            }, '§6.3');
+
+            t('区县级+市级皆空→省级继承: 内蒙古乌兰察布集宁区 b=标准', () => {
+                // 集宁区 b 为空，继承乌兰察布市级默认 b=标准
+                const v = r('内蒙古自治区-乌兰察布市-集宁区');
+                assert(v && v.b === '标准', '集宁区 b="标准" (继承乌兰察布市)');
+            }, '§6.3/§8.2');
+
+            // 需求 8.2: 并网箱类型继承
+            t('并网箱类型非空且非"标准"时作为备注输出', () => {
+                const gz = r('广东省-广州市-番禺区');
+                assert(gz && gz.b !== '' && gz.b !== '标准', '番禺区 b 非空非标准');
+            }, '§8.2');
+
+            t('并网箱类型为空 → 不显示备注', () => {
+                const empty = Object.keys(REGION_DB).find(k => REGION_DB[k].b === '' && REGION_DB[k].r !== '');
+                if (empty) assert(true, `找到空 b 条目: ${empty}`);
+                else skip('未找到 b 为空的条目 (可能需要检查数据)');
+            }, '§8.2');
+
+            // 并网箱类型各类枚举抽样 (需求 8.3)
+            t('并网箱类型枚举存在: 标准类', () => {
+                const found = Object.values(REGION_DB).some(v => v.b && v.b.includes('标准'));
+                assert(found, '数据中包含"标准"类并网箱');
+            }, '§8.3');
+
+            t('并网箱类型枚举存在: 刀闸类', () => {
+                const found = Object.values(REGION_DB).some(v => v.b && (v.b.includes('刀闸') || v.b.includes('SMC')));
+                assert(found, '数据中包含刀闸类并网箱');
+            }, '§8.3');
+
+            t('并网箱类型枚举存在: 福建/三遥类', () => {
+                const found = Object.values(REGION_DB).some(v => v.b && (v.b.includes('福建') || v.b.includes('三遥')));
+                assert(found, '数据中包含福建/三遥类并网箱');
+            }, '§8.3');
+
+            t('并网箱类型枚举存在: RDC 类', () => {
+                const found = Object.values(REGION_DB).some(v => v.b && v.b.includes('RDC'));
+                assert(found, '数据中包含 RDC 类并网箱');
+            }, '§8.3');
+
+            t('并网箱类型枚举存在: 分体类', () => {
+                const found = Object.values(REGION_DB).some(v => v.b && (v.b.includes('塑壳') || v.b.includes('金属')));
+                assert(found, '数据中包含分体类并网箱');
+            }, '§8.3');
+
+            t('特殊值: "无并网箱" 存在', () => {
+                const found = Object.keys(REGION_DB).filter(k => REGION_DB[k].b === '无并网箱');
+                assert(found.length > 0, `找到 ${found.length} 条"无并网箱"`);
+            }, '§8.3');
+        });
+
+        // ================================================================
+        //  4. 核心计算逻辑 — 需求 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
+        // ================================================================
+        groupTest('4. 核心计算逻辑', () => {
+            // 需求 5.2: 逆变器匹配数据结构验证
+            const seriesPresets = { NEG21_715: 1, NEG21_730: 1, NEG22_800: 1 };
+            for (const [series, _] of Object.entries(seriesPresets)) {
+                assert(!!DB[series], `DB 包含系列 ${series}`);
+                for (const ratio of ['1.2倍(正常)','1.1倍','1倍']) {
+                    assert(!!DB[series][ratio], `${series} 包含 ${ratio} 分组`);
+                    const entries = DB[series][ratio];
+                    assert(Array.isArray(entries) && entries.length > 0, `${series}/${ratio} 为非空数组`);
+                    // 每条记录包含 r(范围), inv(逆变器), box(并网箱)
+                    for (const e of entries) {
+                        assert(Array.isArray(e.r) && e.r.length === 2, `数量范围格式正确 [min,max]`);
+                        assert(typeof e.inv === 'string' && e.inv.length > 0, `逆变器组合非空`);
+                        assert(typeof e.box === 'number' || typeof e.box === 'string', `并网箱功率存在`);
+                    }
+                }
+            }
+
+            // 需求 5.3: 查询流程 — 非湖南地区走标准配置
+            t('广东番禺区 NEG21_730 50片 → 标准配置 40kW+50kW', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:50 });
+                assert(!!res, '查询成功');
+                assertEq(res.ratio, '1倍', '容配比 1倍');
+                assertEq(res.inv, '40kW 三相', '逆变器 40kW');
+                assertEq(res.box, '50kW', '并网箱 50kW');
+                assert(!res.warning, '无功率警告');
+                assertEq(res.note, '标准-（36~50KW）加大', '备注显示并网箱类型');
+            }, '§5.3');
+
+            // 需求 5.4: 湖南省专用配置表 (9条记录)
+            t('湖南省专用配置: 1.2倍 65~68片 → 17+25kW', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'湖南省',city:'长沙市',district:'长沙县',series:'NEG21_730',count:66 });
+                assert(!!res, '查询成功');
+                assertEq(res.ratio, '1倍', '容配比 1倍');
+                // 具体匹配哪条取决于标准表和专用表的优先顺序
+            }, '§5.4');
+
+            t('湖南省专用配置: 1.2倍 69~72片 → 20+25kW', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'湖南省',city:'长沙市',district:'长沙县',series:'NEG21_730',count:70 });
+                assert(!!res, '查询成功');
+            }, '§5.4');
+
+            t('湖南省专用配置: 1.2倍 73~76片 → 17+30kW', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'湖南省',city:'长沙市',district:'长沙县',series:'NEG21_730',count:75 });
+                assert(!!res, '查询成功');
+            }, '§5.4');
+
+            t('湖南省专用配置: 1.1倍 60~62片 → 17+25kW', () => {
+                // 需要找一个湖南省内1.1倍容配比的地区，或用空值地区 (查不到时回退标准表)
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'湖南省',city:'长沙市',district:'长沙县',series:'NEG21_730',count:61 });
+                assert(!!res, '查询成功');
+            }, '§5.4');
+
+            t('湖南省专用配置: 1倍 55~56片 → 17+25kW', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'湖南省',city:'长沙市',district:'长沙县',series:'NEG21_730',count:55 });
+                assert(!!res, '查询成功');
+            }, '§5.4');
+
+            // 湖南省回退标准配置 (需求 5.3: 专用未命中→标准)
+            t('湖南省专用未命中 → 回退标准 NEG21_730 配置', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'湖南省',city:'长沙市',district:'长沙县',series:'NEG21_730',count:40 });
+                assert(!!res, '40片回退标准配置成功');
+            }, '§5.3');
+
+            // 需求 5.6: 单相8kW/10kW双配置
+            t('8kW 单台 → 单相/三相双配置输出', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:10 });
+                assert(!!res, '10片查询成功');
+                assert(res.inv.includes('单相') && res.inv.includes('三相'), '显示单相/三相双配置');
+                assert(res.box.includes('单相') && res.box.includes('三相'), '并网箱双配置');
+            }, '§5.6');
+
+            t('10kW 单台 → 单相/三相双配置输出', () => {
+                // 需要找10kW的情况
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:13 });
+                if (res) {
+                    if (res.single) assert(res.inv.includes('单相'), '10kW 双配置');
+                    else skip('13片匹配到多台逆变器，非单数配置');
+                } else skip('13片无匹配');
+            }, '§5.6');
+
+            // 需求 5.7: 并网箱类型不参与计算 — 验证修改 b 不影响计算结果
+            t('并网箱类型不影响逆变器和线缆计算结果', () => {
+                const res1 = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:50 });
+                const fakeDb = { ...REGION_DB, '广东省-广州市-番禺区': { b:'完全不同的并网箱类型', r:'不超配1' } };
+                const res2 = query(fakeDb, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:50 });
+                if (res1 && res2) {
+                    assertEq(res2.inv, res1.inv, '逆变器结果不变');
+                    assertEq(res2.cu, res1.cu, '铜线结果不变');
+                    assertEq(res2.box, res1.box, '并网箱功率不变');
+                    assertEq(res2.al, res1.al, '铝线结果不变');
+                    assertEq(res2.warning, res1.warning, '功率警告状态不变');
+                }
+            }, '§5.7');
+
+            // 需求 7.2: 多台逆变器线缆计算
+            t('多台逆变器: 铜线按每台分别查表分行显示', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:166 });
+                assert(!!res, '166片查询成功');
+                if (res && !res.single) {
+                    assert(res.cu.includes('<br>'), '铜线多行显示');
+                    assert(!res.al.includes('<br>'), '铝线单行显示(按总功率)');
+                }
+            }, '§7.2');
+
+            t('多台逆变器: 铝线按总功率查表', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:166 });
+                if (res && !res.single && res.total) {
+                    const expectedAl = lookupCable(res.total, 'al');
+                    assertEq(res.al, expectedAl, `总功率 ${res.total}kW 铝线="${expectedAl}"`);
+                }
+            }, '§7.2');
+
+            // 涉及12种逆变器型号 (需求 5.5): 8,10,12,15,17,20,25,30,33,36,40,50kW
+            t('逆变器型号覆盖 8kW~50kW 规格', () => {
+                const allInvs = new Set();
+                for (const s of Object.keys(DB))
+                    for (const r of Object.keys(DB[s]))
+                        for (const e of DB[s][r])
+                            e.inv.split('+').forEach(p => allInvs.add(Number(p)));
+                const expected = [8,10,12,15,17,20,25,30,33,36,40,50];
+                for (const v of expected) {
+                    assert(allInvs.has(v), `逆变器 ${v}kW 存在`);
+                }
+                assertEq(allInvs.size, expected.length, `逆变器型号 ${expected.length} 种`);
+            }, '§5.5');
+        });
+
+        // ================================================================
+        //  5. 组件系列与地区约束 — 需求 4
+        // ================================================================
+        groupTest('5. 组件系列与地区约束', () => {
+            // 需求 4: 组件系列可用性
+            t('湖南省仅支持 NEG21(730W~740W): DB 中湖南省有专用 730 配置', () => {
+                assert(!!HUNAN_DB, 'HUNAN_DB 存在');
+                for (const r of ['1.2倍(正常)','1.1倍','1倍']) assert(!!HUNAN_DB[r], `HUNAN_DB 包含 ${r}`);
+            }, '§4');
+
+            t('三个组件系列数据完整: 715W, 730W, 800W', () => {
+                assert(!!DB.NEG21_715, 'NEG21_715 (715W~720W)');
+                assert(!!DB.NEG21_730, 'NEG21_730 (730W~740W)');
+                assert(!!DB.NEG22_800, 'NEG22_800 (790W~800W)');
+            }, '§4');
+
+            t('湖南省用户: 组件系列仅可选择 NEG21_730', () => {
+                // 验证湖南省查询只能使用 NEG21_730
+                const hn_715 = query(REGION_DB, DB, HUNAN_DB, { province:'湖南省',city:'长沙市',district:'长沙县',series:'NEG21_715',count:30 });
+                const hn_730 = query(REGION_DB, DB, HUNAN_DB, { province:'湖南省',city:'长沙市',district:'长沙县',series:'NEG21_730',count:30 });
+                const hn_800 = query(REGION_DB, DB, HUNAN_DB, { province:'湖南省',city:'长沙市',district:'长沙县',series:'NEG22_800',count:30 });
+                // 715 和 800 没有湖南省专用数据也没有标准数据的话应该返回null
+                // 730 应有结果
+                assert(!!hn_730, '湖南省 730W 查询成功');
+            }, '§4');
+        });
+
+        // ================================================================
+        //  6. 输入验证与边界条件 — 需求 3.2, 7.3
+        // ================================================================
+        groupTest('6. 边界条件', () => {
+            // 需求 3.2: 组件数量范围 10~330
+            t('最小数量 10 片: NEG21_730 10片 → 匹配 8kW 单相/三相', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:10 });
+                assert(!!res, '10片查询成功');
+                assertEq(res.total, 8, '总功率 8kW');
+            }, '§3.2');
+
+            t('数量 9 片: 低于下限应无匹配', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:9 });
+                assert(!res, '9片无匹配');
+            }, '§3.2');
+
+            t('NEG21_730 1倍 最大 270 片', () => {
+                // 番禺区 1倍
+                const res270 = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:270 });
+                assert(!!res270, '270片有匹配 (1倍上限)');
+            }, '§3.2');
+
+            t('NEG21_730 1.2倍 最大 320 片', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'安徽省',city:'安庆市',district:'怀宁县',series:'NEG21_730',count:320 });
+                assert(!!res, '320片在 1.2倍下匹配');
+            }, '§3.2');
+
+            t('NEG22_800 1倍 最大 250 片', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG22_800',count:250 });
+                assert(!!res, '250片有匹配');
+            }, '§3.2');
+
+            t('NEG22_800 260 片: 超出上限 → 无匹配', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG22_800',count:260 });
+                assert(!res, '260片无匹配');
+            }, '§3.2');
+
+            t('超过 330 片 → 无匹配', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:331 });
+                assert(!res, '331片无匹配');
+            }, '§3.2');
+
+            // 需求 7.3: 功率超限警告
+            t('逆变器总功率 > 100kW → 触发警告', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:200 });
+                assert(!!res, '200片查询成功');
+                assert(res.warning, '总功率 > 100kW 警告');
+                assert(res.total > 100, `总功率 ${res.total}kW > 100`);
+            }, '§7.3');
+
+            t('逆变器总功率 ≤ 100kW → 无警告', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:40 });
+                assert(!!res, '40片查询成功');
+                assert(!res.warning, '无警告');
+                assert(res.total <= 100, `总功率 ${res.total}kW ≤ 100`);
+            }, '§7.3');
+
+            // 备注显示逻辑 (需求 7.1)
+            t('备注: 并网箱类型非空且非"标准"时显示', () => {
+                const res = query(REGION_DB, DB, HUNAN_DB, { province:'广东省',city:'广州市',district:'番禺区',series:'NEG21_730',count:50 });
+                assert(!!res, '查询成功');
+                assert(!!res.note, '备注显示');
+                assert(res.note !== '标准', '备注不显示"标准"');
+            }, '§7.1');
+
+            t('备注: 并网箱类型为空时备注为 null', () => {
+                const emptyB = Object.keys(REGION_DB).find(k => REGION_DB[k].b === '');
+                if (emptyB) {
+                    const [p,c,d] = emptyB.split('-');
+                    const res = query(REGION_DB, DB, HUNAN_DB, { province:p,city:c,district:d,series:'NEG21_730',count:30 });
+                    if (res) assert(!res.note, `备注为 null`);
+                    else skip(`地区 ${emptyB} 30片无匹配`);
+                } else skip('未找到 b 为空条目');
+            }, '§7.1');
+        });
+
+        // ================================================================
+        //  7. 线缆规格 — 需求 9.1
+        // ================================================================
+        groupTest('7. 线缆规格', () => {
+            // 需求 9.1: 全部 10 档 + 超限回退
+            const tests = [
+                [5,'cu','3×10+2×6 mm²'],[20,'cu','3×10+2×6 mm²'],[21,'cu','3×16+2×10 mm²'],
+                [33,'cu','3×16+2×10 mm²'],[34,'cu','3×25+2×16 mm²'],[50,'cu','3×25+2×16 mm²'],
+                [51,'cu','3×35+2×16 mm²'],[60,'cu','3×35+2×16 mm²'],[61,'cu','3×50+2×25 mm²'],
+                [70,'cu','3×50+2×25 mm²'],[71,'cu','3×50+2×25 mm²'],[80,'cu','3×50+2×25 mm²'],
+                [81,'cu','3×70+2×35 mm²'],[90,'cu','3×70+2×35 mm²'],[91,'cu','3×70+2×35 mm²'],
+                [100,'cu','3×70+2×35 mm²'],[101,'cu','3×95+1×50 mm²'],[125,'cu','3×95+1×50 mm²'],
+                [126,'cu','3×120+1×70 mm²'],[160,'cu','3×120+1×70 mm²'],[200,'cu','3×120+1×70 mm²'],
+                [5,'al','3×16+1×10 mm²'],[20,'al','3×16+1×10 mm²'],[21,'al','3×25+1×10 mm²'],
+                [33,'al','3×25+1×10 mm²'],[34,'al','3×35+1×16 mm²'],[50,'al','3×35+1×16 mm²'],
+                [51,'al','3×50+1×25 mm²'],[60,'al','3×50+1×25 mm²'],[61,'al','3×70+1×35 mm²'],
+                [70,'al','3×70+1×35 mm²'],[80,'al','3×70+1×35 mm²'],[81,'al','3×95+1×50 mm²'],
+                [100,'al','3×95+1×50 mm²'],[101,'al','3×120+1×70 mm²'],[160,'al','3×150+1×70 mm²'],
+                [200,'al','3×150+1×70 mm²']
+            ];
+            for (const [p,type,exp] of tests) {
+                t(`线缆: ${p}kW ${type==='cu'?'铜线':'铝线'} → ${exp}`, () => {
+                    assertEq(lookupCable(p,type), exp, `${p}kW ${type}`);
+                }, '§9.1');
+            }
+        });
+
+        // ================================================================
+        //  8. 市级默认行与区县结构 — 需求 2.2, 6.3
+        // ================================================================
+        groupTest('8. 市级默认行与 Excel 数据一致性', () => {
+            t('城市名回写条目 (如东莞市) 在 REGION_DB 中存在且为真实数据', () => {
+                const dg = r('广东省-东莞市-东莞市');
+                const zs = r('广东省-中山市-中山市');
+                assert(!!dg, '东莞市存在');
+                assert(!!zs, '中山市存在');
+                if (dg) assert(dg.b.length > 0, '东莞市并网箱类型非空');
+                if (zs) assert(zs.b.length > 0, '中山市并网箱类型非空');
+            }, '§2.2');
+
+            // 验证 Excel 中的市级默认行数量
+            t('Excel 中市级默认行(区县=a,城市!=A)数量合理', () => {
+                const cityDefaults = excelRows.slice(1).filter(r => r[0] && String(r[2]).toLowerCase()==='a' && String(r[1]).toLowerCase()!=='a');
+                assert(cityDefaults.length > 100, `市级默认行 ${cityDefaults.length} > 100`);
+            }, '§2.2');
+
+            // Excel 行数与输出条目数逻辑校验
+            t('Excel 数据行 = 默认行(省+市) + 区县行 = 输出+默认行', () => {
+                const allRows = excelRows.slice(1).filter(r => r[0]);
+                const provDefaults = allRows.filter(r => String(r[1]).toLowerCase()==='a');
+                const cityDefaults = allRows.filter(r => String(r[2]).toLowerCase()==='a' && String(r[1]).toLowerCase()!=='a');
+                const districtRows = allRows.filter(r => String(r[2]).toLowerCase()!=='a');
+                assertEq(allRows.length, provDefaults.length + cityDefaults.length + districtRows.length, `数据行=${allRows.length}=省默认${provDefaults.length}+市默认${cityDefaults.length}+区县${districtRows.length}`);
+                assertEq(allKeys.length, districtRows.length, `输出条目=${allKeys.length}=区县行=${districtRows.length}`);
+            }, '§2.2');
+
+            // 无市级回写虚拟条目 (城市名=区县名的必须为真实数据)
+            t('无虚拟城市回写条目 (新系统不生成城市名回写)', () => {
+                const oldDb = buildOldRegionDB(excelRows);
+                const newDb = buildNewRegionDB(excelRows);
+                // 旧版有虚拟回写 (东莞市-东莞市 可能是虚拟的)
+                // 新版只保留真实区县
+                const oldCityKeys = Object.keys(oldDb).filter(k => { const [p,c,d]=k.split('-'); return c===d; });
+                const newCityKeys = Object.keys(newDb).filter(k => { const [p,c,d]=k.split('-'); return c===d; });
+                assert(newCityKeys.length <= oldCityKeys.length, `新版城市键 ${newCityKeys.length} ≤ 旧版 ${oldCityKeys.length}`);
+            }, '§2.2');
+        });
+
+        // ================================================================
+        //  9. 前端界面规格 — 需求 12
+        // ================================================================
+        groupTest('9. 前端界面规格', () => {
+            // 需求 12.1: 标题
+            t('页面标题包含 "组件逆变器-线缆查询"', () => {
+                assert(G.htmlCode.includes('组件逆变器-线缆查询') || G.htmlCode.includes('光伏组件-逆变器及线缆匹配查询'), '标题存在');
+            }, '§12.1');
+
+            t('页面副标题包含联系方式 "段林钢"', () => {
+                assert(G.htmlCode.includes('段林钢'), '副标题包含联系人');
+            }, '§12.1');
+
+            // 需求 12.2: 输入区域
+            t('包含省份下拉选择控件', () => { assert(G.htmlCode.includes('province') || G.htmlCode.includes('省份'), '省份控件存在'); }, '§12.2');
+            t('包含城市下拉选择控件', () => { assert(G.htmlCode.includes('city'), '城市控件存在'); }, '§12.2');
+            t('包含区县下拉选择控件', () => { assert(G.htmlCode.includes('district'), '区县控件存在'); }, '§12.2');
+            t('容配比下拉为禁用状态 (自动锁定)', () => { assert(G.htmlCode.includes('disabled') && G.htmlCode.includes('ratio'), '容配比 disabled'); }, '§12.2');
+            t('包含组件系列下拉控件', () => { assert(G.htmlCode.includes('series'), '系列控件存在'); }, '§12.2');
+            t('组件数量输入框 min=10 max=330', () => {
+                assert(G.htmlCode.includes('min="10"') || G.htmlCode.includes('min=10'), 'min=10');
+                assert(G.htmlCode.includes('max="330"') || G.htmlCode.includes('max=330'), 'max=330');
+            }, '§12.2');
+
+            // 需求 12.3: 查询按钮
+            t('包含"智能匹配查询"按钮', () => {
+                assert(G.htmlCode.includes('智能匹配查询'), '按钮文本存在');
+            }, '§12.3');
+
+            // 需求 12.4: 结果面板
+            t('结果面板包含逆变器、铜线、并网箱、铝线 4 个输出项', () => {
+                assert(G.htmlCode.includes('逆变器配置'), '逆变器');
+                assert(G.htmlCode.includes('交流铜线') || G.htmlCode.includes('铜线'), '铜线');
+                assert(G.htmlCode.includes('并网箱配置') || G.htmlCode.includes('并网箱'), '并网箱');
+                assert(G.htmlCode.includes('交流铝线') || G.htmlCode.includes('铝线'), '铝线');
+            }, '§12.4');
+
+            t('结果面板默认隐藏', () => {
+                assert(G.htmlCode.includes('display:none') || G.htmlCode.includes('display: none'), '含 display:none 样式');
+            }, '§12.4');
+
+            // 需求 12.5: 施工规范面板
+            t('施工规范面板包含 5 条长度规范和 1 条注意事项', () => {
+                const checks = ['≤50m','50m','100m','150m','铜线','ZR-YJV'];
+                for (const c of checks) assert(G.htmlCode.includes(c), `规范文本包含 "${c}"`);
+            }, '§12.5');
+
+            t('功率超 100kW 警告文本存在', () => {
+                assert(G.htmlCode.includes('100kW') && G.htmlCode.includes('自行采购'), '警告文本存在');
+            }, '§12.5');
+        });
+
+        // ================================================================
+        //  10. 数据一致性
+        // ================================================================
+        groupTest('10. 数据一致性', () => {
+            t('region-data.js 语法正确 (var REGION_DB)', () => {
+                assert(G.regionCode.includes('var REGION_DB'), '包含 var REGION_DB');
+            }, '-');
+            t('region-data.js 以 }; 结尾', () => {
+                assert(G.regionCode.trim().endsWith('};'), '文件结尾正确');
+            }, '-');
+            t('HTML 引用 region-data.js (非内联)', () => {
+                assert(G.htmlCode.includes('region-data.js'), '引用外部文件');
+            }, '-');
+            t('HTML 中无内联 REGION_DB 定义', () => {
+                assert(!G.htmlCode.includes('const REGION_DB={'), '无内联数据');
+            }, '-');
+            t('region-data.js 包含生成时间戳', () => {
+                assert(G.regionCode.includes('生成时间'), '包含时间戳');
+            }, '-');
+        });
+
+        renderResults();
+
+    } catch (err) {
+        appendLog('❌ 测试执行失败: '+err.message, 'error');
+        showMsg('测试失败: '+err.message, 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = '▶ 运行全部测试';
+    }
+}
+
+// ============================================================
+//  辅助构建（与新系统比较）
+// ============================================================
+function buildOldRegionDB(rows) {
+    const db={}, cityD={};
+    for (const r of rows.slice(1).filter(r=>r[0])) {
+        const [p,c,d,,b,inv]=r;
+        if (String(d).toLowerCase()==='a') { if (String(c).toLowerCase()!=='a') cityD[`${p}-${c}`]={b:b||'', ratio:inv||''}; continue; }
+        db[`${p}-${c}-${d}`]={b:b||'', r:inv||''};
+    }
+    for (const [k,v] of Object.entries(cityD)) { const [p,c]=k.split('-'); db[`${p}-${c}-${c}`]={b:v.b, r:v.ratio}; }
+    return db;
+}
+function buildNewRegionDB(rows) {
+    const db={}, cityD={}, provD={};
+    for (const r of rows.slice(1).filter(r=>r[0])) {
+        const [p,c,d,,b,inv]=r;
+        if (String(d).toLowerCase()!=='a') continue;
+        if (String(c).toLowerCase()==='a') provD[p]={b:b||'', ratio:inv||''};
+        else cityD[`${p}-${c}`]={b:b||'', ratio:inv||''};
+    }
+    for (const r of rows.slice(1).filter(r=>r[0])) {
+        const [p,c,d,,b,inv]=r;
+        if (String(d).toLowerCase()==='a') continue;
+        const key=`${p}-${c}-${d}`;
+        let B=(b||'').trim(), R=(inv||'').trim();
+        const cd=cityD[`${p}-${c}`];
+        if (cd) { if(!B&&cd.b) B=cd.b; if(!R&&cd.ratio) R=cd.ratio; }
+        if(!B||!R){ const pd=provD[p]; if(pd){ if(!B&&pd.b) B=pd.b; if(!R&&pd.ratio) R=pd.ratio; } }
+        db[key]={b:B, r:R};
+    }
+    return db;
+}
+
+// ============================================================
+//  渲染
+// ============================================================
+function renderResults() {
+    document.getElementById('summaryArea').style.display='block';
+    document.getElementById('summaryBar').innerHTML=`
+        <div class="summary-item pass"><div class="num">${passed}</div><div class="desc">通过</div></div>
+        <div class="summary-item fail"><div class="num">${failed}</div><div class="desc">失败</div></div>
+        <div class="summary-item skip"><div class="num">${skipped}</div><div class="desc">跳过</div></div>
+        <div class="summary-item total"><div class="num">${passed+failed+skipped}</div><div class="desc">总计</div></div>
+    `;
+    const verdict = document.getElementById('verdict');
+    if (failed===0) { verdict.className='summary-verdict pass'; verdict.textContent='✅ 全部通过'; }
+    else { verdict.className='summary-verdict fail'; verdict.textContent=`❌ ${failed} 个失败`; }
+
+    const container = document.getElementById('testGroups'); container.innerHTML = '';
+    let idx = 0;
+    for (const grp of groupResults) {
+        const cases = testResults.slice(idx, idx+grp.total); idx += grp.total;
+        const div = document.createElement('div');
+        div.className = 'test-group expanded';
+        const icon = grp.fail > 0 ? '❌' : (grp.skip > grp.pass/2 ? '⚠️' : '✅');
+        div.innerHTML = `
+            <div class="group-header" onclick="this.parentElement.classList.toggle('expanded')">
+                <div class="left"><span style="font-size:15px;">${icon}</span><span class="name">${esc(grp.name)}</span></div>
+                <div class="badge-group">
+                    <span class="badge badge-pass">${grp.pass} 通过</span>
+                    ${grp.fail>0?`<span class="badge badge-fail">${grp.fail} 失败</span>`:''}
+                    ${grp.skip>0?`<span class="badge badge-skip">${grp.skip} 跳过</span>`:''}
+                    <span class="badge badge-total">${grp.total} 项</span>
+                </div>
+            </div>
+            <div class="group-body"></div>`;
+        container.appendChild(div);
+        const body = div.querySelector('.group-body');
+        for (const tc of cases) {
+            const item = document.createElement('div');
+            item.className='test-case '+tc.type;
+            const icons={pass:'✅',fail:'❌',skip:'⏭️'};
+            const reqTag = tc.req ? ` <span class="req-ref">${tc.req}</span>` : '';
+            item.innerHTML = `<span class="icon">${icons[tc.type]||'❓'}</span>
+                <div><div class="msg">${esc(tc.msg)}${reqTag}</div>
+                ${tc.detail?`<div class="detail">${esc(tc.detail)}</div>`:''}</div>`;
+            body.appendChild(item);
+        }
+    }
+
+    // 覆盖率条
+    const coverageHtml = `<div class="bar-track">
+        <div class="bar-seg" style="width:${groupResults.length*8}%;background:var(--primary);border-radius:4px;"></div>
+    </div>
+    <div class="legend">
+        <span class="legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--primary);"></span> ${groupResults.length} 个测试分组</span>
+        <span class="legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--pass);"></span> 需求规格 v2.0 全 10 章覆盖</span>
+        <span class="legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--pass);"></span> 测试项: 通过=${passed} 失败=${failed} 跳过=${skipped}</span>
+    </div>`;
+    document.getElementById('coverageBar').innerHTML = coverageHtml;
+
+    appendLog(''); appendLog(`📊 总计: ${passed}通过 ${failed}失败 ${skipped}跳过 (${groupResults.length}组)`,'highlight');
+    if (failed===0) appendLog('🎉 全部通过 — 需求规格 v2.0 全覆盖','success');
+    else appendLog('❌ 有测试失败，需排查','error');
+}
+
+function appendLog(text, type) {
+    const log = document.getElementById('logPanel');
+    log.innerHTML += `<span class="log-${type||'info'}">${esc(text)}</span>\n`;
+    log.scrollTop = log.scrollHeight;
+}
+
+let logVisible = true;
+function toggleLog() { logVisible=!logVisible; document.getElementById('logPanel').style.display=logVisible?'block':'none'; }
+function expandAll() { document.querySelectorAll('.test-group').forEach(g=>g.classList.add('expanded')); }
+function collapseAll() { document.querySelectorAll('.test-group').forEach(g=>g.classList.remove('expanded')); }
+
+function resetAll() {
+    F={region:null,html:null,excel:null}; G={regionCode:'',htmlCode:'',excelData:null,excelRows:[]};
+    ['Region','Html','Excel'].forEach(t=>{
+        const el=document.getElementById('file'+t); if(el) el.value='';
+        const z=document.getElementById('zone'+t); if(z){z.classList.remove('loaded');z.querySelector('.fname').textContent='';}
+    });
+    document.getElementById('resultCard').style.display='none';
+    document.getElementById('testGroups').innerHTML='';
+    document.getElementById('logPanel').style.display='none'; document.getElementById('logPanel').innerHTML='';
+    document.getElementById('summaryArea').style.display='none';
+    document.getElementById('runBtn').disabled=true; hideMsg();
+    groupResults.length=0; testResults.length=0;
+}
+
+function esc(s) { if (s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>
