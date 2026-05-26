@@ -161,44 +161,16 @@ function buildOldRegionDB(excelRows) {
   return db;
 }
 
-// ---- 构建新版 REGION_DB（省市两级继承，无市级回写条目） ----
+// ---- 构建新版 REGION_DB（一一对应，无层级继承） ----
 function buildNewRegionDB(excelRows) {
   const db = {};
-  const cityDefaults = {};     // key: "省份-城市"
-  const provinceDefaults = {}; // key: "省份" (city="A")
-
-  for (const row of excelRows.slice(1).filter(r => r[0])) {
-    const [province, city, district, region, boxType, invRatio] = row;
-    if (String(district).toLowerCase() !== 'a') continue;
-    if (String(city).toLowerCase() === 'a') {
-      provinceDefaults[province] = { b: boxType || '', ratio: invRatio || '' };
-    } else {
-      cityDefaults[`${province}-${city}`] = { b: boxType || '', ratio: invRatio || '' };
-    }
-  }
 
   for (const row of excelRows.slice(1).filter(r => r[0])) {
     const [province, city, district, region, boxType, invRatio] = row;
     if (String(district).toLowerCase() === 'a') continue;
     const key = `${province}-${city}-${district}`;
-    let b = (boxType || '').trim();
-    let r = (invRatio || '').trim();
-
-    // 市级继承
-    const cityDef = cityDefaults[`${province}-${city}`];
-    if (cityDef) {
-      if (!b && cityDef.b) b = cityDef.b;
-      if (!r && cityDef.ratio) r = cityDef.ratio;
-    }
-    // 省级继承（兜底）
-    if (!b || !r) {
-      const provDef = provinceDefaults[province];
-      if (provDef) {
-        if (!b && provDef.b) b = provDef.b;
-        if (!r && provDef.ratio) r = provDef.ratio;
-      }
-    }
-
+    const b = (boxType || '').trim();
+    const r = (invRatio || '').trim();
     db[key] = { b, r };
   }
 

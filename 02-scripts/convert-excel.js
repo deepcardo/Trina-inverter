@@ -8,10 +8,9 @@
  *
  * 功能：
  * 1. 读取 Excel 容配比查询表
- * 2. 识别市级默认行（区县=a）作为兜底配置
- * 3. 识别省级默认行（城市=A，区县=a）作为全省兜底
- * 4. 将市级/省级默认值继承到下属区县（区县行为空时自动填充）
- * 5. 输出为前端可用的 region-data.js（不写入虚拟默认行，避免下拉框污染）
+ * 2. 识别市级默认行（区县=a）和省级默认行（城市=A，区县=a）
+ * 3. 直接使用各区县行自有数据，无层级继承（空值保持为空，由运行时处理）
+ * 4. 输出为前端可用的 region-data.js
  */
 
 const XLSX = require('xlsx');
@@ -67,52 +66,18 @@ function convert() {
   console.log(`   市级默认行: ${Object.keys(cityDefaults).length}`);
   console.log(`   区县行: ${districtRows.length}`);
 
-  // 第二步：构建 REGION_DB，处理继承
+  // 第二步：构建 REGION_DB，一一对应（无层级继承）
   const regionDb = {};
-  let inheritedFromCity = 0;
-  let inheritedFromProvince = 0;
 
   for (const row of districtRows) {
     const [province, city, district, _region, boxType, invRatio] = row;
     const regionKey = `${province}-${city}-${district}`;
-    const cityDefKey = `${province}-${city}`;
 
-    let box = (boxType || '').trim();
-    let ratio = (invRatio || '').trim();
-
-    // 继承市级默认值（最优先：精确匹配城市）
-    const cityDef = cityDefaults[cityDefKey];
-    if (cityDef) {
-      if (!box && cityDef.box) {
-        box = cityDef.box;
-        inheritedFromCity++;
-      }
-      if (!ratio && cityDef.ratio) {
-        ratio = cityDef.ratio;
-        inheritedFromCity++;
-      }
-    }
-
-    // 继承省级默认值（兜底：全省统一默认）
-    if (!box || !ratio) {
-      const provDef = provinceDefaults[province];
-      if (provDef) {
-        if (!box && provDef.box) {
-          box = provDef.box;
-          inheritedFromProvince++;
-        }
-        if (!ratio && provDef.ratio) {
-          ratio = provDef.ratio;
-          inheritedFromProvince++;
-        }
-      }
-    }
+    const box = (boxType || '').trim();
+    const ratio = (invRatio || '').trim();
 
     regionDb[regionKey] = { b: box, r: ratio };
   }
-
-  console.log(`   市级继承填充: ${inheritedFromCity} 个字段`);
-  console.log(`   省级继承填充: ${inheritedFromProvince} 个字段`);
 
   // 第三步：数据校验报告
   const provCount = Object.keys(provinceDefaults).length;
@@ -143,9 +108,9 @@ function convert() {
     if (v.b) ownBox++; else emptyBox++;
     if (v.r) ownRatio++; else emptyRatio++;
   }
-  console.log(`  并网箱有值:              ${ownBox}（自有+继承）`);
+  console.log(`  并网箱有值:              ${ownBox}`);
   console.log(`  并网箱为空:              ${emptyBox}`);
-  console.log(`  逆变器有值:              ${ownRatio}（自有+继承）`);
+  console.log(`  逆变器有值:              ${ownRatio}`);
   console.log(`  逆变器为空:              ${emptyRatio}`);
   console.log('');
 

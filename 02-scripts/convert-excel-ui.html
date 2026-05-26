@@ -484,70 +484,16 @@ function runConversion() {
         appendLog('   区县行: ' + districtRows.length, 'info');
         appendLog('');
 
-        // 第二步：构建 REGION_DB
+        // 第二步：构建 REGION_DB（一一对应，无层级继承）
         const regionDb = {};
-        let inheritedFromCity = 0;
-        let inheritedFromProvince = 0;
-        const inheritanceLog = [];
 
         for (const row of districtRows) {
             const [province, city, district, _region, boxType, invRatio] = row;
             const regionKey = `${province}-${city}-${district}`;
-            const cityDefKey = `${province}-${city}`;
-
-            let box = (boxType || '').trim();
-            let ratio = (invRatio || '').trim();
-
-            const inheritance = { from: '', fields: [] };
-
-            // 市级继承
-            const cityDef = cityDefaults[cityDefKey];
-            if (cityDef) {
-                if (!box && cityDef.box) {
-                    box = cityDef.box;
-                    inheritedFromCity++;
-                    inheritance.fields.push('并网箱');
-                }
-                if (!ratio && cityDef.ratio) {
-                    ratio = cityDef.ratio;
-                    inheritedFromCity++;
-                    inheritance.fields.push('逆变器');
-                }
-                if (inheritance.fields.length > 0) inheritance.from = 'city';
-            }
-
-            // 省级继承
-            if (!box || !ratio) {
-                const provDef = provinceDefaults[province];
-                if (provDef) {
-                    if (!box && provDef.box) {
-                        box = provDef.box;
-                        inheritedFromProvince++;
-                        if (inheritance.from !== 'city') {
-                            if (!inheritance.from) inheritance.from = 'province';
-                            inheritance.fields.push('并网箱');
-                        }
-                    }
-                    if (!ratio && provDef.ratio) {
-                        ratio = provDef.ratio;
-                        inheritedFromProvince++;
-                        if (inheritance.from !== 'city') {
-                            if (!inheritance.from) inheritance.from = 'province';
-                            inheritance.fields.push('逆变器');
-                        }
-                    }
-                }
-            }
-
+            const box = (boxType || '').trim();
+            const ratio = (invRatio || '').trim();
             regionDb[regionKey] = { b: box, r: ratio };
-            if (inheritance.fields.length > 0) {
-                inheritanceLog.push({ key: regionKey, from: inheritance.from, fields: inheritance.fields });
-            }
         }
-
-        appendLog('   市级继承填充: ' + inheritedFromCity + ' 个字段', 'success');
-        appendLog('   省级继承填充: ' + inheritedFromProvince + ' 个字段', 'success');
-        appendLog('');
 
         // 第三步：校验
         const totalDefaults = provCount + cityCount;
@@ -573,9 +519,9 @@ function runConversion() {
             if (v.b) ownBox++; else emptyBox++;
             if (v.r) ownRatio++; else emptyRatio++;
         }
-        appendLog('  并网箱有值: ' + ownBox + '（自有+继承）');
+        appendLog('  并网箱有值: ' + ownBox);
         appendLog('  并网箱为空: ' + emptyBox);
-        appendLog('  逆变器有值: ' + ownRatio + '（自有+继承）');
+        appendLog('  逆变器有值: ' + ownRatio);
         appendLog('  逆变器为空: ' + emptyRatio);
         appendLog('');
 
@@ -585,19 +531,7 @@ function runConversion() {
             appendLog('  ⚠️  数量偏差，请检查 Excel 数据格式', 'warn');
         }
 
-        // 列出继承详情（抽样）
-        if (inheritanceLog.length > 0) {
-            appendLog('');
-            appendLog('  继承填充示例（前 10 条）:', 'highlight');
-            const samples = inheritanceLog.slice(0, 10);
-            for (const s of samples) {
-                const fromLabel = s.from === 'province' ? '← 省级' : '← 市级';
-                appendLog('    ' + s.key + '  ' + s.fields.join('/') + ' ' + fromLabel, 'info');
-            }
-            if (inheritanceLog.length > 10) {
-                appendLog('    ... 共 ' + inheritanceLog.length + ' 个地区继承了上级默认值', 'info');
-            }
-        }
+        // 无层级继承：每行数据独立使用自己的值
 
         // 第四步：生成 JS 代码
         appendLog('');
@@ -612,7 +546,7 @@ function runConversion() {
         appendLog('  🎉 转换完成！点击下方"下载"按钮保存文件', 'success');
 
         // 显示统计卡片
-        showStats(outputCount, provCount, cityCount, inheritedFromCity + inheritedFromProvince, emptyBox);
+        showStats(outputCount, provCount, cityCount, emptyBox);
 
         // 显示下载按钮
         document.getElementById('downloadBtn').style.display = '';
@@ -675,13 +609,12 @@ function hideMsg() {
     document.getElementById('msgBox').style.display = 'none';
 }
 
-function showStats(outputCount, provCount, cityCount, inheritedCount, emptyBox) {
+function showStats(outputCount, provCount, cityCount, emptyBox) {
     const grid = document.getElementById('statsGrid');
     grid.style.display = 'grid';
     grid.innerHTML = `
         <div class="stat-card"><div class="stat-value">${outputCount}</div><div class="stat-label">输出条目</div></div>
         <div class="stat-card"><div class="stat-value">${provCount + cityCount}</div><div class="stat-label">默认行</div></div>
-        <div class="stat-card"><div class="stat-value">${inheritedCount}</div><div class="stat-label">继承填充字段</div></div>
         <div class="stat-card"><div class="stat-value" style="color:${emptyBox > 0 ? '#D48806' : '#52C41A'}">${emptyBox}</div><div class="stat-label">空字段</div></div>
     `;
 }
