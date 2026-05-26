@@ -38,7 +38,3 @@
 - 日期格式：4 位数字（月+日），例如 5 月 12 日 → `0512更新`
 - 副标题位于 `index.html` 中 class 为 `subtitle` 的元素
 - 此为强制标准，不可跳过
-
-## Git 工作流
-
-使用 SSH 方式：`git@github.com:Ricardo-9877/pv-tool.git`
