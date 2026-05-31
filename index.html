@@ -266,12 +266,12 @@ select:focus:not(:focus-visible), input:focus:not(:focus-visible) { outline:none
       if (!PROVINCE_CITY_DISTRICT[p]) PROVINCE_CITY_DISTRICT[p] = {};
       if (!PROVINCE_CITY_DISTRICT[p][c]) PROVINCE_CITY_DISTRICT[p][c] = [];
       if (!PROVINCE_CITY_DISTRICT[p][c].includes(d)) PROVINCE_CITY_DISTRICT[p][c].push(d);
-      // Identify default city rows and exclude from search index
+      // Identify default city rows
       if (d === c || d === '市辖区') {
         CITY_DEFAULT_SET.add(k);
-      } else {
-        SEARCH_INDEX.push({ areaKey: k, province: p, city: c, district: d, fullName: p + c + d });
       }
+      // All entries should be searchable
+      SEARCH_INDEX.push({ areaKey: k, province: p, city: c, district: d, fullName: p + c + d });
     });
   }
 
