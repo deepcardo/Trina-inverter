@@ -19,7 +19,7 @@ const XLSX = require('xlsx');
 // ---- 配置 ----
 const VERBOSE = process.argv.includes('verbose');
 const ROOT = path.resolve(__dirname, '..');
-const HTML_PATH = path.join(ROOT, '线缆匹配查询0507.html');
+const HTML_PATH = path.join(ROOT, 'index.html');
 const REGION_DATA_PATH = path.join(ROOT, 'region-data.js');
 const EXCEL_PATH = path.join(ROOT, '全国容配比查询表0506.xlsx');
 
@@ -161,16 +161,32 @@ function buildOldRegionDB(excelRows) {
   return db;
 }
 
-// ---- 构建新版 REGION_DB（一一对应，无层级继承） ----
+// ---- 构建新版 REGION_DB（区县一一对应，空值继承所属市级默认值） ----
+// 与运行时/生产 region-data.js 行为一致：区县行若 b/r 为空，则继承市级默认行（district=a, city!=a）。
 function buildNewRegionDB(excelRows) {
-  const db = {};
+  const rows = excelRows.slice(1).filter(r => r[0]);
+  const cityDefaults = {};
 
-  for (const row of excelRows.slice(1).filter(r => r[0])) {
-    const [province, city, district, region, boxType, invRatio] = row;
+  // 第一遍：收集市级默认行
+  for (const row of rows) {
+    const [province, city, district, _region, boxType, invRatio] = row;
+    if (String(district).toLowerCase() === 'a' && String(city).toLowerCase() !== 'a') {
+      cityDefaults[`${province}-${city}`] = {
+        b: (boxType || '').trim(),
+        r: (invRatio || '').trim()
+      };
+    }
+  }
+
+  const db = {};
+  // 第二遍：区县行，空值继承市级默认
+  for (const row of rows) {
+    const [province, city, district, _region, boxType, invRatio] = row;
     if (String(district).toLowerCase() === 'a') continue;
     const key = `${province}-${city}-${district}`;
-    const b = (boxType || '').trim();
-    const r = (invRatio || '').trim();
+    const def = cityDefaults[`${province}-${city}`] || { b: '', r: '' };
+    const b = (boxType || '').trim() || def.b;
+    const r = (invRatio || '').trim() || def.r;
     db[key] = { b, r };
   }
 
@@ -282,6 +298,25 @@ function main() {
     assert(!!DB.NEG22_800['1.2倍(正常)'], 'NEG22_800 包含 1.2倍(正常) 分组');
     assert(!!DB.NEG22_800['1.1倍'], 'NEG22_800 包含 1.1倍 分组');
     assert(!!DB.NEG22_800['1倍'], 'NEG22_800 包含 1倍 分组');
+
+    // NEG22_785 (新增 780W~785W) — 存在性与分组
+    assert(!!DB.NEG22_785, 'DB 包含 NEG22_785 (780W~785W)');
+    assert(!!DB.NEG22_785['1.2倍(正常)'], 'NEG22_785 包含 1.2倍(正常) 分组');
+    assert(!!DB.NEG22_785['1.1倍'], 'NEG22_785 包含 1.1倍 分组');
+    assert(!!DB.NEG22_785['1倍'], 'NEG22_785 包含 1倍 分组');
+    // 数量区间连续性 / 无重叠 / 边界校验
+    for (const rk of ['1.2倍(正常)', '1.1倍', '1倍']) {
+      const rows = DB.NEG22_785[rk];
+      assertEqual(rows[0].r[0], 10, `NEG22_785 ${rk} 起点为 10`);
+      assertEqual(rows[rows.length - 1].r[1], 254, `NEG22_785 ${rk} 上限为 254`);
+      let continuous = true, overlap = false;
+      for (let i = 1; i < rows.length; i++) {
+        if (rows[i].r[0] !== rows[i - 1].r[1] + 1) continuous = false;
+        if (rows[i].r[0] <= rows[i - 1].r[1]) overlap = true;
+      }
+      assert(continuous, `NEG22_785 ${rk} 数量区间连续无缺口`);
+      assert(!overlap, `NEG22_785 ${rk} 数量区间无重叠`);
+    }
 
     // HUNAN_DB
     assert(!!HUNAN_DB['1.2倍(正常)'], 'HUNAN_DB 包含 1.2倍(正常)');
@@ -427,6 +462,26 @@ function main() {
     });
     assert(!neg22_fail, 'NEG22_800 260片 → 查询失败（超出上限）');
 
+    // NEG22_785 (新增 780W~785W) 边界条件
+    const neg22_785_min = simulateQuery(REGION_DB, DB, HUNAN_DB, CABLE_THRESHOLDS, {
+      province: '广东省', city: '广州市', district: '番禺区',
+      series: 'NEG22_785', count: 10
+    });
+    assert(!!neg22_785_min, 'NEG22_785 10片 → 查询成功');
+    assertEqual(neg22_785_min.inv, '8kW单相 / 8kW三相', 'NEG22_785 10片 → 8kW 单相/三相双配置');
+
+    const neg22_785_ok = simulateQuery(REGION_DB, DB, HUNAN_DB, CABLE_THRESHOLDS, {
+      province: '广东省', city: '广州市', district: '番禺区',
+      series: 'NEG22_785', count: 254
+    });
+    assert(!!neg22_785_ok, 'NEG22_785 254片 → 查询成功（上限内）');
+
+    const neg22_785_fail = simulateQuery(REGION_DB, DB, HUNAN_DB, CABLE_THRESHOLDS, {
+      province: '广东省', city: '广州市', district: '番禺区',
+      series: 'NEG22_785', count: 255
+    });
+    assert(!neg22_785_fail, 'NEG22_785 255片 → 查询失败（超出上限 254）');
+
     // 8kW 单相逆变器
     const inv8Result = simulateQuery(REGION_DB, DB, HUNAN_DB, CABLE_THRESHOLDS, {
       province: '广东省', city: '广州市', district: '番禺区',
@@ -543,11 +598,65 @@ function main() {
 
     // 验证转换脚本语法正确（仅在子进程中语法检查，避免意外的文件写入）
     try {
-      require('child_process').execFileSync('node', ['-c', 'scripts/convert-excel.js'], { cwd: ROOT, stdio: 'pipe' });
+      require('child_process').execFileSync('node', ['-c', '02-scripts/convert-excel.js'], { cwd: ROOT, stdio: 'pipe' });
       assert(true, 'convert-excel.js 语法正确');
     } catch (e) {
       assert(false, `convert-excel.js 语法错误: ${e.message}`);
     }
+  });
+
+  // ================================================================
+  //  7. 湖南专项级联（组件系列下拉选项）— 对应 test-hunan.js 测试1/2
+  // ================================================================
+  group('7. 湖南专项级联（组件系列下拉选项）', () => {
+    const html = fs.readFileSync(HTML_PATH, 'utf-8');
+
+    const hunanMatch = html.match(/if \(p === PROV_HUNAN\) \{\s*\$\.series\.innerHTML = '([^']*)';/);
+    const nonHunanMatch = html.match(/\} else \{\s*\$\.series\.innerHTML = '([^']*)';/);
+    assert(!!hunanMatch, 'handleCascade 命中湖南分支 series.innerHTML');
+    assert(!!nonHunanMatch, 'handleCascade 命中非湖南分支 series.innerHTML');
+
+    const parseValues = s => (s.match(/<option value="([^"]*)">/g) || []).map(o => o.replace(/<option value="([^"]*)">/, '$1'));
+
+    const hunanValues = hunanMatch ? parseValues(hunanMatch[1]) : [];
+    const nonHunanValues = nonHunanMatch ? parseValues(nonHunanMatch[1]) : [];
+
+    // 需求 #1：湖南无需任何修改，仅保留 730 系列
+    assertDeepEqual(hunanValues, ['NEG21_730'], '湖南地区下拉仅显示 NEG21_730（保持原配置不变）');
+    assert(!hunanValues.includes('NEG22_785'), '湖南地区下拉不包含新增的 NEG22_785');
+    assert(!hunanValues.includes('NEG22_800'), '湖南地区下拉不包含 NEG22_800');
+
+    // 非湖南：保留原有三项 + 新增 NEG22_785
+    assert(nonHunanValues.includes('NEG21_715'), '非湖南包含 NEG21_715');
+    assert(nonHunanValues.includes('NEG21_730'), '非湖南包含 NEG21_730');
+    assert(nonHunanValues.includes('NEG22_800'), '非湖南包含 NEG22_800');
+    assert(nonHunanValues.includes('NEG22_785'), '非湖南包含新增 NEG22_785 (780W~785W)');
+    assertEqual(nonHunanValues.length, 4, '非湖南下拉共 4 项（715/730/800/785），无多余选项');
+
+    // 湖南查询结果与既有 HUNAN_DB 一致（验证湖南专项路径未被改动，对应 test-hunan.js 测试3~14）
+    // 说明：test-hunan.js 中硬编码的期望值（如 54片→36kW）已与当前 HUNAN_DB 数据不一致（属历史陈旧用例），
+    //       此处改为数据驱动断言：范围内查询必须精确命中 HUNAN_DB，范围外回退标准配置且不崩溃。
+    // mapRegionRatio 由“原始容配比字符串”推导最终比率键：标准→1.2倍(默认), 不超配1→1倍, 不超配1.1→1.1倍
+    const RAW_RATIO = { '1.2倍(正常)': '标准', '1.1倍': '不超配1.1', '1倍': '不超配1' };
+    const hq = (ratio, count) => simulateQuery(
+      { '湖南省-张家界市-张家界市': { b: '', r: RAW_RATIO[ratio] } },
+      DB, HUNAN_DB, CABLE_THRESHOLDS,
+      { province: '湖南省', city: '张家界市', district: '张家界市', series: 'NEG21_730', count }
+    );
+    // 范围内：结果直接命中 HUNAN_DB（而非标准表），且 inv/箱型与 HUNAN_DB 行完全一致
+    for (const ratio of ['1.2倍(正常)', '1.1倍', '1倍']) {
+      for (const row of HUNAN_DB[ratio]) {
+        const c = Math.floor((row.r[0] + row.r[1]) / 2); // 取区间中点
+        const res = hq(ratio, c);
+        assert(!!res, `湖南 ${ratio} ${c}片 → 命中 HUNAN_DB 专项配置`);
+        assert(res.inv.startsWith(row.inv), `湖南 ${ratio} ${c}片 inv 与 HUNAN_DB 一致 (期望前缀 ${row.inv})`);
+        assertEqual(res.box, row.box + 'kW', `湖南 ${ratio} ${c}片 并网箱与 HUNAN_DB 一致 (${row.box}kW)`);
+      }
+    }
+    // 范围外（如 54 片，低于湖南 1.2倍最小下限 65）：回退标准配置且不崩溃
+    const res54 = hq('1.2倍(正常)', 54);
+    assert(!!res54, '湖南 1.2倍 54片（低于专项下限）→ 回退标准配置成功');
+    assertEqual(res54.ratio, '1.2倍(正常)', '湖南 54片 容配比仍为 1.2倍(正常)');
   });
 
   // ================================================================
