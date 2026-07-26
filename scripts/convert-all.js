@@ -17,7 +17,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const EXCEL_PATH = path.resolve(__dirname, '..', 'data', process.argv[2] || '全国并网箱&逆变器配置统计.xlsx');
+const EXCEL_PATH = path.resolve(__dirname, '..', process.argv[2] || '全国并网箱&逆变器配置统计.xlsx');
 const OUTPUT_PATH = path.resolve(__dirname, '..', 'src', 'public', 'js', 'data', process.argv[3] || 'region-data.js');
 
 function convert() {
