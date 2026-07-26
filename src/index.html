@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>光伏组件-逆变器及线缆匹配查询</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>组件-逆变器及线缆匹配查询</h1><div class="subtitle">0726更新，支持NEG 715-800W组件，有疑问处请联系南部解决方案部段林钢</div></div>
+    <div class="step-card">
+        <h2 style="margin-bottom:16px;"><span class="step-badge">第一步</span> 确定项目地</h2>
+        <div class="search-section">
+            <div class="form-group">
+                <div class="search-wrapper">
+                    <span class="search-icon"></span>
+                    <input type="text" id="searchInput" placeholder="搜索地区（支持中文/拼音，如：番禺 / gz）" autocomplete="off">
+                    <button class="search-clear" id="searchClear">×</button>
+                </div>
+                <div id="searchResults" class="search-dropdown"></div>
+            </div>
+            <div id="recentSection" class="recent-section">
+                <div class="recent-header"><span>最近使用</span><span class="recent-clear" id="recentClear">清空记录</span></div>
+                <div id="recentList" class="recent-list"></div>
+            </div>
+            <span class="expand-link" id="expandLink">展开地区选择 <span class="expand-arrow"></span></span>
+        </div>
+        <div class="cascading-wrap" id="cascadingWrap">
+        <div class="input-grid">
+            <div class="form-group"><label>省份</label><select id="province"><option value="">请选择省份</option></select></div>
+            <div class="form-group"><label>城市</label><select id="city"><option value="">请选择</option></select></div>
+            <div class="form-group"><label>区县</label><select id="district"><option value="">请选择</option></select></div>
+        </div>
+    </div>
+    </div>
+    <div class="param-section">
+        <h2 style="margin-bottom:18px;"><span class="step-badge">第二步</span> 输入项目参数</h2>
+        <div class="input-grid">
+            <div class="form-group"><label>容配比 <span class="lock-badge">🔒</span></label><div class="ratio-display" id="ratio"><span class="ratio-value">1.2倍 (正常超配)</span></div><div class="ratio-hint" id="ratioHint">选择区县后自动匹配</div></div>
+            <div class="form-group"><label>组件系列</label><select id="series"><option value="">请先选择地区</option></select></div>
+            <div class="form-group"><label for="count">组件数量</label><div class="input-with-suffix"><input type="number" id="count" placeholder="10 ~ 330" min="10" max="330" step="1"><span class="input-suffix">片</span></div></div>
+        </div>
+    </div>
+    <button class="btn-primary" id="queryBtn">智能匹配查询</button>
+    <div id="msgBox" role="alert"><span id="msgText"></span><button class="msg-close" aria-label="关闭">×</button></div>
+    <div id="resultPanel" class="result-panel" aria-live="polite">
+        <div class="result-header">匹配结果清单<button class="result-copy-btn" id="copyBtn">复制结果</button></div>
+        <div class="result-grid">
+            <div class="result-box"><div class="box-label">逆变器配置</div><div class="box-value" id="resInv">-</div></div>
+            <div class="result-box"><div class="box-label">逆变器交流铜线</div><div class="box-value" id="resCu">-</div></div>
+            <div class="result-box"><div class="box-label">并网箱配置</div><div class="box-value" id="resBox">-</div></div>
+            <div class="result-box"><div class="box-label">并网箱交流铝线</div><div class="box-value" id="resAl">-</div></div>
+        </div>
+        <div id="gridNote" class="note-section"></div>
+        <div id="warningMsg" class="warning-msg"><span>组件总功率超过 100kW 时，并网箱需自行采购，自采元器件需符合公司白名单要求</span></div>
+    </div>
+    <details class="whitelist-panel">
+        <summary class="whitelist-summary"><span class="wl-summary-left">线缆厂家白名单 <span class="whitelist-count">交流6家 · 直流4家</span></span></summary>
+        <div class="whitelist-table">
+            <div class="whitelist-col">
+                <h3>交流线厂家白名单</h3>
+                <ul>
+                    <li>江苏上上电缆集团有限公司</li>
+                    <li>无锡市明珠电缆有限公司</li>
+                    <li>远东电缆有限公司</li>
+                    <li>江苏亨通电力电缆有限公司</li>
+                    <li>航天瑞奇电缆有限公司</li>
+                    <li>双登电缆股份有限公司</li>
+                </ul>
+            </div>
+            <div class="whitelist-col">
+                <h3>直流线厂家白名单</h3>
+                <ul>
+                    <li>常州八益电缆股份有限公司</li>
+                    <li>江苏上上电缆集团有限公司</li>
+                    <li>远东电缆有限公司</li>
+                    <li>双登电缆股份有限公司</li>
+                </ul>
+            </div>
+        </div>
+    </details>
+    <div class="rules-panel">
+        <h3 class="rules-title">选型与施工规范</h3>
+        <div class="rules-content">
+            <ol>
+                <li>逆变器输出线必须使用铜线 (ZR-YJV-0.6/1kV)。</li>
+                <li>交流电缆长度 ≤50m，线径参考表格标准。</li>
+                <li>50m ＜ 长度 ≤100m，线径比规定 <b>大一号</b>。</li>
+                <li>100m ＜ 长度 ≤150m，线径比规定 <b>大二号</b>。</li>
+                <li>长度 ＞150m，请联系交付人员处理。</li>
+            </ol>
+            <p style="margin-top:8px;font-weight:500;">注意：并网时电气负责人务必在场，确保线缆线径符合要求，进出口有效封堵，铝出线需使用铜铝端子。</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.27.0/dist/index.js"></script>
+<script src="js/data/region-data.js"></script>
+<script src="js/data/constants.js"></script>
+<script src="js/data/inverters.js"></script>
+<script src="js/data/hunan.js"></script>
+<script src="js/data/cables.js"></script>
+<script src="js/matching.js"></script>
+<script src="js/render.js"></script>
+<script src="js/search.js"></script>
+<script src="js/main.js"></script>
+</body></html>

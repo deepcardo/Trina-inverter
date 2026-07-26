@@ -4,41 +4,157 @@
 
 ## 项目简介
 
-一个纯前端的光伏系统组件匹配工具，用于根据地区、组件系列和数量查询逆变器、并网箱及线缆规格。
+一个纯前端的光伏系统组件匹配工具，用于根据地区、组件系列和数量查询逆变器、并网箱及线缆规格。部署于 GitHub Pages。
 
 ## 命令
 
-无需构建或测试命令。这是一个单 HTML 文件项目。
+### 开发
 
-- 开发：直接在浏览器中打开 `index.html`
-- 部署：推送到 GitHub，可通过 GitHub Pages 托管
+```bash
+npm run dev       # 启动 Vite 开发服务器（热更新）
+npm run build     # 生产构建 → 输出 dist/
+npm run preview   # 预览构建产物
+```
+
+### 测试
+
+```bash
+npm run test      # 运行 46 个单元测试
+npm run validate  # 运行数据完整性验证（91 项检查）
+```
+
+### 数据更新
+
+```bash
+npm run convert   # 从 Excel 重新生成区域容配比数据
+```
+
+### 部署
+
+推送到 `main` 分支后，GitHub Actions 自动运行：
+
+```
+npm test → npm run build → deploy-pages
+```
+
+中间任一环节失败（测试不通过 / 验证不通过 / 构建失败），部署自动中止，线上不受影响。
 
 ## 架构
 
-单文件应用 (`index.html`)，包含：
+### 目录结构
 
-- **CSS**：响应式设计，使用 CSS 变量，移动端优先的网格布局
-- **HTML**：表单，包含 6 个输入项（省份/城市/区县下拉框、容配比、组件系列、组件数量）
-- **JavaScript**：
-  - `REGION_DB`：地区配置数据库，映射中国行政区划到逆变器/并网箱规格
-  - `INV_DB`：逆变器规格查询表
-  - `cascadeUpdate()`：处理三级下拉框联动（省份 → 城市 → 区县）
-  - `queryMatch()`：核心匹配逻辑 - 根据输入计算逆变器、铜线、并网箱、铝线规格
-  - 数据以 JS 对象形式嵌入，无外部依赖
+```
+src/
+├── index.html               ← 视图入口（约 5KB）
+├── css/
+│   └── style.css            ← 样式（从内联分离）
+├── public/                   ← Vite public 目录，原样复制到 dist
+│   └── js/
+│       ├── main.js           ← 应用入口：事件绑定、初始化、模块协调
+│       ├── search.js         ← 搜索 + 拼音匹配 + 级联联动
+│       ├── matching.js       ← 核心匹配逻辑（lookupMatch, lookupCable）
+│       ├── render.js         ← 结果渲染 + 施工规范 + 复制功能
+│       └── data/
+│           ├── region-data.js   ← 区域容配比数据（由 convert 脚本自动生成）
+│           ├── inverters.js     ← 逆变器配置表 DB（手动维护）
+│           ├── hunan.js         ← 湖南/张家界专项配置（手动维护）
+│           ├── cables.js        ← 线缆规格表（手动维护）
+│           └── constants.js     ← 共享常量（版本号、数据源名称、系列枚举）
+scripts/
+├── convert-all.js           ← Excel → region-data.js 转换脚本
+├── validate-data.js         ← 数据完整性验证（91 项检查）
+└── shared/
+    └── load-module.js       ← VM 沙箱加载共享模块
+tests/
+├── matching.test.js         ← 46 个单元测试
+└── helpers/
+    └── load-app.js          ← 测试辅助模块
+data/                        ← Excel 源文件（版本管理）
+archived/                    ← 旧版 Excel 归档
+dist/                        ← 构建产物（gitignore 已排除，不提交）
+```
+
+### 数据流
+
+```
+Excel 源文件 (全国并网箱&逆变器配置统计.xlsx / 全国省市区列表 sheet)
+    │
+    ▼ npm run convert
+scripts/convert-all.js
+    │
+    ▼
+src/public/js/data/region-data.js   ← 区域容配比数据（由 convert 脚本自动生成）
+    │
+    ▼ 用户交互
+地区选择 → 容配比锁定 → 组件系列选择 → 数量输入
+    │
+    ▼ matching.js
+1. 张家界专项 → ZHANGJIAJIE_DB
+2. 湖南其他 → HUNAN_DB
+3. 730系列 → DB.NEG21_730
+4. 兜底 → DB[系列][容配比]
+    │
+    ▼ render.js
+输出：逆变器配置 | 交流铜线 | 并网箱配置 | 交流铝线
+```
+
+### 数据维护说明
+
+| 数据 | 维护方式 | 来源 |
+|------|---------|------|
+| 区域容配比 | `npm run convert` 自动生成 | 全国并网箱&逆变器配置统计.xlsx → 全国省市区列表 |
+| 逆变器配置 | 手动编辑 `src/public/js/data/inverters.js` | Excel 手动整理 |
+| 湖南专项 | 手动编辑 `src/public/js/data/hunan.js` | Excel 手动整理 |
+| 线缆规格 | 手动编辑 `src/public/js/data/cables.js` | Excel 手动整理 |
+
+### 组件系列
+
+- `NEG21(715W)` — NEG21_715
+- `NEG21(730W)` — NEG21_730
+- `NEG22(780~785W)` — NEG22_785
+- `NEG22(800W)` — NEG22_800
 
 ## 关键数据结构
 
-- `REGION_DB`: `{ "省份-城市-区县": { b: "并网箱配置", r: "容配比要求" } }`
-- `INV_DB`: 组件系列 → 功率 → 数量 → 逆变器型号映射
+```javascript
+// 区域容配比数据
+REGION_DB: { "省份-城市-区县": { b: "并网箱类型", r: "容配比限制" } }
+
+// 逆变器配置表（4个系列 × 3种容配比）
+DB: { 系列: { "1.2倍(正常)": [{ r: [min, max], inv: "逆变器组合", box: 功率 }] } }
+
+// 线缆规格（10档功率阶梯）
+CABLE_THRESHOLDS: [{ limit: 功率, cu: "铜线规格", al: "铝线规格" }]
+```
+
+## 更新流程
+
+### 日常修改（逆变器配置 / 线缆 / 界面逻辑）
+```
+改代码 → git push（推送到 main）
+→ GitHub Actions 自动构建并部署
+```
+
+### 区域容配比更新
+```
+更新 Excel → npm run convert → git push
+→ GitHub Actions 自动构建并部署
+```
+
+### 完整更新
+```
+更新 Excel + 改代码 → npm run convert → npm run test → git push
+→ GitHub Actions 自动构建并部署
+```
+
+## 强制标准
+
+1. **副标题日期更新**：每次提交推送前，检查 `src/index.html` 中的副标题（`.subtitle` 元素），将其更新为 **推送当天的日期**，格式为 `MMDD更新`（例如 `0512更新`）。此为强制标准，不可跳过。
+
+2. **构建验证**：推送前执行 `npm run test && npm run build`，确保测试和构建通过。GitHub Actions 会自动执行，但本地先跑一遍能提前发现问题。
+
+3. **数据注释**：修改 `src/public/js/data/` 下的数据文件时，在文件头部更新版本信息和修改日期。
 
 ## 语言要求
 
 所有与用户的交流、回复、解释、注释必须使用**中文**。
-
-## 强制标准：副标题日期更新
-
-每次提交推送前，必须检查 `index.html` 中的副标题（`.subtitle` 元素），将其更新为 **推送当天的日期**，格式为 `MMDD更新`（例如 `0512更新`）。
-
-- 日期格式：4 位数字（月+日），例如 5 月 12 日 → `0512更新`
-- 副标题位于 `index.html` 中 class 为 `subtitle` 的元素
-- 此为强制标准，不可跳过
