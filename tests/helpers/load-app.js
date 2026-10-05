@@ -59,6 +59,7 @@ export function getApp() {
     SEARCH_INDEX: globalThis.SEARCH_INDEX,
     mapRegionRatio: globalThis.mapRegionRatio,
     isValidCount: globalThis.isValidCount,
+    getCountRange: globalThis.getCountRange,
     lookupCable: globalThis.lookupCable,
     findInRange: globalThis.findInRange,
     lookupMatch: globalThis.lookupMatch,

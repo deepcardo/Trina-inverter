@@ -243,6 +243,7 @@ function handleCascade(lv, presetP, presetC, presetD) {
   if ($.series.options.length > 0 && $.series.options[0].value) $.series.value = $.series.options[0].value;
 
   if (presetD) $.district.value = presetD;
+  updateCountRange();
 }
 
 function applyRegionRule(p, c, d) {
@@ -257,6 +258,7 @@ function applyRegionRule(p, c, d) {
     void $.ratio.offsetWidth;
     $.ratio.classList.add('ratio-flash');
   }
+  updateCountRange();
 }
 
 function cascadeSync() {

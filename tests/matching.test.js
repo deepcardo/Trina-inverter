@@ -9,6 +9,24 @@ import { getApp } from './helpers/load-app.js';
 
 let app;
 
+describe('组件数量动态范围', () => {
+  it.each([
+    ['NEG22_785', '1倍', 254],
+    ['NEG21_730', '1倍', 270],
+    ['NEG21_730', '1.2倍(正常)', 320],
+    ['NEG21_730', '1.1倍', 297],
+  ])('%s / %s 的范围和边界校验一致', (series, ratio, max) => {
+    const state = { province: '广东省', series, ratio };
+    expect(app.getCountRange(state)).toEqual({ min: 10, max });
+    expect(app.isValidCount(max, state)).toBe(true);
+    expect(app.isValidCount(max + 1, state)).toBe(false);
+    expect(app.isValidCount(10.5, state)).toBe(false);
+  });
+  it('未选择系列时不提供误导性的范围', () => {
+    expect(app.getCountRange({ series: '', ratio: '1倍' })).toBeNull();
+  });
+});
+
 beforeAll(() => {
   app = getApp();
 });

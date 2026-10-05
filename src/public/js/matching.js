@@ -17,8 +17,22 @@ function mapRegionRatio(val) {
   return RATIO_NORMAL;
 }
 
-function isValidCount(val) {
-  return !isNaN(val) && val >= 10 && val <= 330;
+// 从实际配置表读取范围，避免页面提示与数据脱节。
+function getCountRange(state) {
+  const rows = [...(DB[state.series]?.[state.ratio] || [])];
+  if (!rows.length) return null;
+  if (state.province === PROV_HUNAN) {
+    rows.push(...(HUNAN_DB[state.ratio] || []));
+    if (state.city === '张家界市' && ['永定区', '武陵源区', '慈利县', '桑植县'].includes(state.district)) {
+      rows.push(...(ZHANGJIAJIE_DB[state.ratio] || []));
+    }
+  }
+  return { min: Math.min(...rows.map(row => row.r[0])), max: Math.max(...rows.map(row => row.r[1])) };
+}
+
+function isValidCount(val, state) {
+  const range = state ? getCountRange(state) : { min: 10, max: 330 };
+  return Number.isInteger(val) && !!range && val >= range.min && val <= range.max;
 }
 
 function lookupCable(power, type) {

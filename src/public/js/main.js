@@ -63,8 +63,28 @@ function getInputState() {
     district: $.district.value,
     series: $.series.value,
     ratio: $.ratio.dataset.value || '1.2倍(正常)',
-    count: parseInt($.count.value, 10)
+    count: $.count.value === '' ? NaN : Number($.count.value)
   };
+}
+
+function countRangeMessage() {
+  const range = getCountRange(getInputState());
+  return range ? `⚠️ 请输入有效整数数量（${range.min} ~ ${range.max} 片）` : '⚠️ 请先选择地区和组件系列';
+}
+
+function updateCountRange() {
+  const range = getCountRange(getInputState());
+  $.count.placeholder = range ? `${range.min} ~ ${range.max}` : '请先选择地区和组件系列';
+  for (const attr of ['min', 'max']) {
+    if (range) $.count.setAttribute(attr, range[attr]);
+    else $.count.removeAttribute(attr);
+  }
+  clearMarkError($.count);
+  hideError();
+  if ($.count.value && range && !isValidCount(Number($.count.value), getInputState())) {
+    markError($.count);
+    showError(countRangeMessage());
+  }
 }
 
 // ================= 查询处理 =================
@@ -84,9 +104,9 @@ function handleQuery() {
     showError('⚠️ 请选择完整的地区（省/市/区县）');
     hasErr = true;
   }
-  if (!state.count || !isValidCount(state.count)) {
+  if (!state.count || !isValidCount(state.count, state)) {
     markError($.count);
-    if (!hasErr) showError('⚠️ 请输入有效数量（10 ~ 330 片）');
+    if (!hasErr) showError(countRangeMessage());
     hasErr = true;
   }
   if (hasErr) return;
@@ -106,10 +126,10 @@ function handleQuery() {
 }
 
 function handleCountBlur() {
-  const val = parseInt($.count.value, 10);
-  if ($.count.value && !isValidCount(val)) {
+  const val = Number($.count.value);
+  if ($.count.value && !isValidCount(val, getInputState())) {
     markError($.count);
-    $.msgText.textContent = '⚠️ 请输入有效数量（10 ~ 330 片）';
+    $.msgText.textContent = countRangeMessage();
     $.msgBox.classList.add('msg-visible');
   } else {
     clearMarkError($.count);
@@ -235,6 +255,7 @@ function setupActions() {
     hideError();
   });
   $.series.addEventListener('change', function () {
+    updateCountRange();
     hideResult();
   });
 }
@@ -245,8 +266,9 @@ function setupAutoQuery() {
   function tryAutoQuery() {
     clearFormErrors();
     hideError();
+    updateCountRange();
     const state = getInputState();
-    if (state.province && state.city && state.district && state.series && isValidCount(state.count)) {
+    if (state.province && state.city && state.district && state.series && isValidCount(state.count, state)) {
       handleQuery();
     }
   }
