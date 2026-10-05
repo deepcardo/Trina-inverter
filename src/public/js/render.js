@@ -18,6 +18,23 @@ function hideError() { $.msgBox.classList.remove('msg-visible'); }
 function renderResult(match, state) {
   const invPowers = match.inv.split('+').map(Number);
   const totalPower = invPowers.reduce((a, b) => a + b, 0);
+  const isCableAdvice = totalPower > 160;
+  for (const el of [$.resCu, $.resAl]) {
+    const card = el.closest('.result-box');
+    card.classList.toggle('cable-suggested', isCableAdvice);
+    let badge = card.querySelector('.cable-advice-badge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'cable-advice-badge';
+      badge.textContent = '⚠ 建议线缆规格';
+      card.querySelector('.box-label').appendChild(badge);
+    }
+    badge.hidden = !isCableAdvice;
+  }
+  $.cableAdvice.hidden = !isCableAdvice;
+  $.cableAdvice.textContent = isCableAdvice
+    ? `逆变器累计功率 ${totalPower} kW，超过公司标准表160 kW范围。${CABLE_ADVICE_NOTICE}铜线按每台逆变器功率匹配，铝线按累计功率匹配。`
+    : '';
   const isSmallPower = invPowers.length === 1 && (invPowers[0] === 8 || invPowers[0] === 10);
 
   if (isSmallPower) {
@@ -99,7 +116,8 @@ function handleCopy() {
     '• 逆变器配置：' + $.resInv.textContent.trim(),
     '• 逆变器交流铜线：\n  - ' + extractLines($.resCu),
     '• 并网箱配置：' + $.resBox.textContent.trim(),
-    '• 并网箱交流铝线：' + extractLines($.resAl)
+    '• 并网箱交流铝线：' + extractLines($.resAl),
+    ...($.cableAdvice.hidden ? [] : ['', '• 建议线缆规格提示：' + $.cableAdvice.textContent])
   ].join('\n');
   doCopyText(text).then(function () {
     $.copyBtn.textContent = '✓ 已复制';

@@ -49,6 +49,7 @@ function cacheDom() {
   $.resCu = document.getElementById('resCu');
   $.resBox = document.getElementById('resBox');
   $.resAl = document.getElementById('resAl');
+  $.cableAdvice = document.getElementById('cableAdvice');
   $.gridNote = document.getElementById('gridNote');
   $.warningMsg = document.getElementById('warningMsg');
   $.copyBtn = document.getElementById('copyBtn');

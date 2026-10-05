@@ -74,6 +74,11 @@ input[type=number] { -moz-appearance:textfield; }
 .result-copy-btn.copied { color:#52C41A; border-color:#52C41A; }
 .cable-line { display:block; }
 .cable-label { color:var(--text-secondary); font-weight:400; }
+.result-box.cable-suggested { background:#FFF7E6; border-color:#FAAD14; }
+.cable-suggested .box-value, .cable-suggested .cable-label { color:#874D00; }
+.cable-advice-badge { display:inline-block; margin-left:6px; padding:2px 6px; border-radius:4px; background:#FFE7BA; color:#874D00; font-size:11px; font-weight:600; }
+.cable-advice-badge[hidden], .cable-advice[hidden] { display:none; }
+.cable-advice { margin-top:12px; padding:12px 16px; border:1px solid #FAAD14; border-radius:8px; background:#FFF7E6; color:#874D00; font-size:13px; line-height:1.7; }
 @media(prefers-reduced-motion:reduce){ .result-panel{animation:none;} .warning-msg{animation:none;} .cascading select{opacity:1;transition:none;} .search-dropdown.sd-visible{animation:none;} .ratio-flash{animation:none;} .whitelist-table{animation:none;} #msgBox{transition:none;} }
 @media(max-width:480px) { body { padding:12px 8px; } .container { padding:16px; } .header h1 { font-size:20px; } .input-grid { grid-template-columns:1fr; gap:12px; } .input-grid .form-group:nth-child(3), .input-grid .form-group:nth-child(6) { grid-column:span 1; } .result-grid { grid-template-columns:1fr; } .form-group label { font-size:14px; } select, input { font-size:16px; } .cascading-wrap.visible { max-height:500px; } }
 .search-section { margin-bottom:16px; position:relative; }

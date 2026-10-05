@@ -84,10 +84,18 @@ describe('lookupCable', () => {
     expect(app.lookupCable(33, 'cu')).toBe('3×16+2×10 mm²');
   });
 
-  it('超大功率返回最大规格', () => {
-    expect(app.lookupCable(200, 'cu')).toBe('3×120+1×70 mm²');
-    expect(app.lookupCable(200, 'al')).toBe('3×150+1×70 mm²');
-    expect(app.lookupCable(999, 'cu')).toBe('3×120+1×70 mm²');
+  it('160kW仍执行公司标准，超过后使用建议表', () => {
+    expect(app.lookupCable(160, 'cu')).toBe('3×120+1×70 mm²');
+    expect(app.lookupCable(160, 'al')).toBe('3×150+1×70 mm²');
+    for (const power of [160.1, 170, 180]) {
+      expect(app.lookupCable(power, 'al')).toBe('3×185+1×95 mm²');
+    }
+    for (const power of [180.1, 190, 200]) {
+      expect(app.lookupCable(power, 'cu')).toBe('3×185+1×95 mm²');
+      expect(app.lookupCable(power, 'al')).toBe('3×240+1×120 mm²');
+    }
+    expect(app.lookupCable(201, 'al')).toBe('超出建议表范围，需专项选型');
+    expect(app.lookupCable(999, 'cu')).toBe('超出建议表范围，需专项选型');
   });
 
   it('铜线与铝线返回不同值', () => {

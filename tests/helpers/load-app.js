@@ -21,7 +21,7 @@ export function getApp() {
     'RATIO_NORMAL', 'RATIO_LIGHT', 'RATIO_NONE', 'RATIO_OPTIONS');
   const inverters = loadScript(`${PUBLIC}/data/inverters.js`, 'DB');
   const hunan = loadScript(`${PUBLIC}/data/hunan.js`, 'HUNAN_DB', 'ZHANGJIAJIE_DB');
-  const cables = loadScript(`${PUBLIC}/data/cables.js`, 'CABLE_THRESHOLDS');
+  const cables = loadScript(`${PUBLIC}/data/cables.js`, 'CABLE_THRESHOLDS', 'CABLE_RECOMMENDATIONS', 'CABLE_ADVICE_NOTICE');
   const matching = loadScript(`${PUBLIC}/matching.js`,
     'mapRegionRatio', 'isValidCount', 'lookupCable', 'findInRange', 'lookupMatch');
 

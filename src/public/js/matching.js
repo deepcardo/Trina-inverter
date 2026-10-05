@@ -23,8 +23,8 @@ function isValidCount(val) {
 
 function lookupCable(power, type) {
   for (const t of CABLE_THRESHOLDS) { if (power <= t.limit) return type === 'cu' ? t.cu : t.al; }
-  const last = CABLE_THRESHOLDS[CABLE_THRESHOLDS.length - 1];
-  return type === 'cu' ? last.cu : last.al;
+  for (const t of CABLE_RECOMMENDATIONS) { if (power <= t.limit) return type === 'cu' ? t.cu : t.al; }
+  return '超出建议表范围，需专项选型';
 }
 
 /**
