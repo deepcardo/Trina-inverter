@@ -49,7 +49,7 @@ src/
         ├── inverters.js     ← 逆变器配置表 DB（手动维护）
         ├── hunan.js         ← 湖南/张家界专项（手动维护）
         ├── cables.js        ← 线缆规格表（手动维护）
-        └── constants.js     ← 共享常量（版本号、系列枚举、容配比选项）
+        └── constants.js     ← 共享常量（湖南省标识、容配比挡位与选项）
 scripts/                     ← convert-all.js / validate-data.js / shared/
 tests/                       ← matching / data-changes / inverter-correction
 dist/                        ← 构建产物（gitignore 排除，勿提交、勿手改）
@@ -89,6 +89,7 @@ src/public/js/data/region-data.js   ← 区域容配比数据（自动生成，�
 | `lookupCable(power, type)` | 线缆查询，`type` 为 `'cu'` / `'al'`，先查标准表再查建议表 |
 | `findInRange(rows, count)` | 在配置行数组中按 `row.r = [min, max]` 匹配数量 |
 | `mapRegionRatio(val)` | 区域原始容配比字符串 → 标准挡位（1.2 / 1.1 / 1.0） |
+| `isZhangjiajie(state)` | 判断是否张家界专项覆盖区县（区县名单与专项表同源于 `hunan.js`） |
 | `getHunanDbs(state)` | 湖南地区返回专项表数组（张家界返回两张表） |
 | `getCountRange(state)` | 按地区+系列+容配比计算数量合法范围（页面提示同源） |
 | `isValidCount(val, state)` | 数量合法性校验 |
@@ -150,7 +151,8 @@ CABLE_ADVICE_NOTICE: "此为建议线缆规格，需根据当地供电局要求�
 | `npm run validate` 报专项超范围 | `HUNAN_DB` / `ZHANGJIAJIE_DB` 挡位超出标准表区间 | 专项挡位须落在标准表范围内 |
 | `npm run test` 数据回归失败 | 手动改了配置表但未同步更新断言 | 核对新值正确后更新 `data-changes.test.js` |
 | `region-data.js` 改动被还原 | 该文件由 convert 生成 | 改 Excel → `npm run convert`，勿手改 |
-| CI 部署中止 | 本地未跑 test / build，或副标题日期未更新 | 本地执行 [强制标准](#强制标准) 第 1、2 条 |
+| CI 数据新鲜度校验失败 | 改了 Excel 但提交前忘跑 `npm run convert` | 本地重跑 convert 并提交（详见 [更新流程](#更新流程)） |
+| CI 测试 / 校验 / 构建失败 | 本地未跑 `npm run test && npm run build` 就推送 | 本地先跑一遍，通过后再推送 |
 
 ## 更新流程
 
