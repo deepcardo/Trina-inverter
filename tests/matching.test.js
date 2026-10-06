@@ -33,27 +33,35 @@ beforeAll(() => {
 
 // ==================== isValidCount ====================
 describe('isValidCount', () => {
-  it('有效数量 10~330 返回 true', () => {
-    expect(app.isValidCount(10)).toBe(true);
-    expect(app.isValidCount(100)).toBe(true);
-    expect(app.isValidCount(330)).toBe(true);
+  // NEG21_715 / 1.2倍(正常) 的实际范围: 10 ~ 320
+  const state = { province: '广东省', series: 'NEG21_715', ratio: '1.2倍(正常)' };
+
+  it('范围内整数返回 true', () => {
+    expect(app.isValidCount(10, state)).toBe(true);
+    expect(app.isValidCount(100, state)).toBe(true);
+    expect(app.isValidCount(320, state)).toBe(true);
   });
 
-  it('小于 10 返回 false', () => {
-    expect(app.isValidCount(0)).toBe(false);
-    expect(app.isValidCount(9)).toBe(false);
+  it('小于范围下限返回 false', () => {
+    expect(app.isValidCount(0, state)).toBe(false);
+    expect(app.isValidCount(9, state)).toBe(false);
   });
 
-  it('大于 330 返回 false', () => {
-    expect(app.isValidCount(331)).toBe(false);
-    expect(app.isValidCount(999)).toBe(false);
+  it('超出范围上限返回 false', () => {
+    expect(app.isValidCount(321, state)).toBe(false);
+    expect(app.isValidCount(999, state)).toBe(false);
   });
 
-  it('非数字返回 false', () => {
-    expect(app.isValidCount(NaN)).toBe(false);
-    expect(app.isValidCount('abc')).toBe(false);
-    expect(app.isValidCount(null)).toBe(false);
-    expect(app.isValidCount(undefined)).toBe(false);
+  it('非整数返回 false', () => {
+    expect(app.isValidCount(NaN, state)).toBe(false);
+    expect(app.isValidCount('abc', state)).toBe(false);
+    expect(app.isValidCount(null, state)).toBe(false);
+    expect(app.isValidCount(undefined, state)).toBe(false);
+    expect(app.isValidCount(10.5, state)).toBe(false);
+  });
+
+  it('未选系列（无可用范围）返回 false', () => {
+    expect(app.isValidCount(100, { province: '广东省', series: '', ratio: '1.2倍(正常)' })).toBe(false);
   });
 });
 

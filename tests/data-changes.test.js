@@ -56,10 +56,10 @@ describe('并网箱变更验证（江西省）', () => {
     '江西省-萍乡市-芦溪县',
     '江西省-萍乡市-莲花县',
     '江西省-鹰潭市-余江区',
+    '江西省-鹰潭市-月湖区',
   ];
 
   for (const key of jiangxiDistricts) {
-    const district = key.split('-')[2];
     it(`${key}: 并网箱清空（原是"标准"）`, () => {
       expect(REGION_DB[key].b).toBe('');
     });
@@ -67,11 +67,14 @@ describe('并网箱变更验证（江西省）', () => {
 });
 
 // ==================== 容配比全量汇总 ====================
-describe('容配比变更汇总', () => {
-  it('总变更数 = 17', () => {
-    // 这条测试验证当前 17 条容配比变更没有被意外增加或减少
-    const ratioChanges = Object.values(REGION_DB).filter(v => v.r !== '').length;
-    const emptyRatio = Object.values(REGION_DB).filter(v => v.r === '').length;
-    expect(ratioChanges + emptyRatio).toBe(Object.keys(REGION_DB).length);
+describe('容配比数据格式', () => {
+  it('所有 r 值均为合法形式（空 / 标准x / 不超配x）', () => {
+    // 原为"总变更数 = 17"的恒真断言（非空数 + 空数恒等于总数，任何数据都能通过）。
+    // 改为校验取值域：新增非法形式（如拼写变体、多余空白）时失败。
+    const valid = /^(|标准\d+(?:\.\d+)?|不超配\d+(?:\.\d+)?)$/;
+    const bad = Object.entries(REGION_DB)
+      .filter(([, v]) => !valid.test(v.r))
+      .map(([k, v]) => `${k}: "${v.r}"`);
+    expect(bad).toEqual([]);
   });
 });

@@ -253,31 +253,31 @@ function setupActions() {
   $.count.addEventListener('input', function () {
     clearMarkError(this);
     hideError();
+    debounceAutoQuery();
   });
   $.series.addEventListener('change', function () {
     updateCountRange();
     hideResult();
+    debounceAutoQuery();
   });
 }
 
-// ================= 自动触发查询 =================
-function setupAutoQuery() {
-  let timer = null;
-  function tryAutoQuery() {
-    clearFormErrors();
-    hideError();
-    updateCountRange();
-    const state = getInputState();
-    if (state.province && state.city && state.district && state.series && isValidCount(state.count, state)) {
-      handleQuery();
-    }
+// ================= 自动触发查询（防抖） =================
+let autoQueryTimer = null;
+
+function tryAutoQuery() {
+  clearFormErrors();
+  hideError();
+  updateCountRange();
+  const state = getInputState();
+  if (state.province && state.city && state.district && state.series && isValidCount(state.count, state)) {
+    handleQuery();
   }
-  function debounceQuery() {
-    clearTimeout(timer);
-    timer = setTimeout(tryAutoQuery, 500);
-  }
-  $.count.addEventListener('input', debounceQuery);
-  $.series.addEventListener('change', debounceQuery);
+}
+
+function debounceAutoQuery() {
+  clearTimeout(autoQueryTimer);
+  autoQueryTimer = setTimeout(tryAutoQuery, 500);
 }
 
 // ================= 初始化 =================
@@ -291,7 +291,6 @@ function init() {
   setupSearch();
   setupMisc();
   setupActions();
-  setupAutoQuery();
   if (typeof REGION_DB === 'undefined' || !REGION_DB) showDataLoadError();
   handleCascade('init');
   showRecentIfAvailable();

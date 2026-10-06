@@ -17,22 +17,30 @@ function mapRegionRatio(val) {
   return RATIO_NORMAL;
 }
 
+// 是否张家界专项覆盖区县（判定标准与专项表同源于 hunan.js）
+function isZhangjiajie(state) {
+  return state.province === PROV_HUNAN && state.city === '张家界市'
+    && ZHANGJIAJIE_DISTRICTS.includes(state.district);
+}
+
+// 湖南专项挡位表，按查询优先级排列：张家界先专项表再湖南表，其余地市只走湖南表
+function getHunanDbs(state) {
+  if (state.province !== PROV_HUNAN) return [];
+  return isZhangjiajie(state) ? [ZHANGJIAJIE_DB, HUNAN_DB] : [HUNAN_DB];
+}
+
 // 从实际配置表读取范围，避免页面提示与数据脱节。
 function getCountRange(state) {
   const rows = [...(DB[state.series]?.[state.ratio] || [])];
   if (!rows.length) return null;
-  if (state.province === PROV_HUNAN) {
-    rows.push(...(HUNAN_DB[state.ratio] || []));
-    if (state.city === '张家界市' && ['永定区', '武陵源区', '慈利县', '桑植县'].includes(state.district)) {
-      rows.push(...(ZHANGJIAJIE_DB[state.ratio] || []));
-    }
-  }
+  for (const db of getHunanDbs(state)) rows.push(...(db[state.ratio] || []));
   return { min: Math.min(...rows.map(row => row.r[0])), max: Math.max(...rows.map(row => row.r[1])) };
 }
 
 function isValidCount(val, state) {
-  const range = state ? getCountRange(state) : { min: 10, max: 330 };
-  return Number.isInteger(val) && !!range && val >= range.min && val <= range.max;
+  if (!Number.isInteger(val)) return false;
+  const range = state ? getCountRange(state) : null;
+  return !!range && val >= range.min && val <= range.max;
 }
 
 function lookupCable(power, type) {
@@ -61,12 +69,11 @@ function findInRange(rows, count) {
 }
 
 function lookupMatch(state) {
-  let match = null;
-  const isZhangjiajie = state.province === PROV_HUNAN && state.city === '张家界市'
-    && state.district && ['永定区', '武陵源区', '慈利县', '桑植县'].includes(state.district);
-  if (isZhangjiajie) match = findInRange(ZHANGJIAJIE_DB[state.ratio], state.count);
-  if (!match && state.province === PROV_HUNAN) match = findInRange(HUNAN_DB[state.ratio], state.count);
-  if (!match && state.series === 'NEG21_730') match = findInRange(DB.NEG21_730[state.ratio], state.count);
-  if (!match && DB[state.series]) match = findInRange(DB[state.series][state.ratio], state.count);
-  return match;
+  for (const db of getHunanDbs(state)) {
+    const match = findInRange(db[state.ratio], state.count);
+    if (match) return match;
+  }
+  if (state.series === 'NEG21_730') return findInRange(DB.NEG21_730[state.ratio], state.count);
+  if (DB[state.series]) return findInRange(DB[state.series][state.ratio], state.count);
+  return null;
 }

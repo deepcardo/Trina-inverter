@@ -17,13 +17,11 @@ export function getApp() {
 
   const region = loadScript(`${PUBLIC}/data/region-data.js`, 'REGION_DB');
   const constants = loadScript(`${PUBLIC}/data/constants.js`,
-    'APP_VERSION', 'DATA_SOURCE', 'PROV_HUNAN',
+    'PROV_HUNAN',
     'RATIO_NORMAL', 'RATIO_LIGHT', 'RATIO_NONE', 'RATIO_OPTIONS');
   const inverters = loadScript(`${PUBLIC}/data/inverters.js`, 'DB');
-  const hunan = loadScript(`${PUBLIC}/data/hunan.js`, 'HUNAN_DB', 'ZHANGJIAJIE_DB');
+  const hunan = loadScript(`${PUBLIC}/data/hunan.js`, 'HUNAN_DB', 'ZHANGJIAJIE_DB', 'ZHANGJIAJIE_DISTRICTS');
   const cables = loadScript(`${PUBLIC}/data/cables.js`, 'CABLE_THRESHOLDS', 'CABLE_RECOMMENDATIONS', 'CABLE_ADVICE_NOTICE');
-  const matching = loadScript(`${PUBLIC}/matching.js`,
-    'mapRegionRatio', 'isValidCount', 'lookupCable', 'findInRange', 'lookupMatch');
 
   Object.assign(globalThis, region, constants, inverters, hunan, cables);
 
