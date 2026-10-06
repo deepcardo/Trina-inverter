@@ -20,6 +20,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EXCEL_PATH = path.resolve(__dirname, '..', process.argv[2] || '全国并网箱&逆变器配置统计.xlsx');
 const OUTPUT_PATH = path.resolve(__dirname, '..', 'src', 'public', 'js', 'data', process.argv[3] || 'region-data.js');
 
+// 数据版本号与更新日期，随 Excel 源更新同步修改（写入生成文件的头部注释）
+const DATA_VERSION = '0929';
+const UPDATED_DATE = '2026-10-05';
+
 function convert() {
   console.log(`📖 读取: ${EXCEL_PATH}`);
   if (!fs.existsSync(EXCEL_PATH)) {
@@ -106,12 +110,15 @@ function convert() {
   console.log(`  ✅ 数据行 = 默认行 + 区县行: ${dataRows.length === Object.keys(provinceDefaults).length + Object.keys(cityDefaults).length + districtRows.length}`);
 
   // 输出文件
+  // 头部不含时间戳等易变信息，保证同一 Excel 每次生成结果完全一致（CI 依赖此特性做新鲜度检查）。
+  // 数据版本/更新日期在更新 Excel 后随本次转换手动更新。
   const keys = Object.keys(regionDb).sort();
   const lines = [
     '/**',
-    ' * 区域容配比数据 — 由 scripts/convert-all.js 自动生成',
+    ' * 区域容配比数据 — 由 scripts/convert-all.js 自动生成，请勿手工编辑',
     ` * 源文件: 全国并网箱&逆变器配置统计.xlsx → 全国省市区列表`,
-    ` * 生成时间: ${new Date().toISOString()}`,
+    ` * 数据版本: ${DATA_VERSION}`,
+    ` * 更新日期: ${UPDATED_DATE}`,
     ` * 条目数: ${keys.length}`,
     ' */',
     '',
