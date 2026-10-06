@@ -125,8 +125,8 @@ npm run preview
 |------|------|------|
 | 前端 | 原生 HTML / CSS / JavaScript | 无框架依赖，无运行时 npm 依赖 |
 | 构建 | Vite 6.x | `root: 'src'`，产物输出 `dist/`，`base: './'` 相对路径（适配 GitHub Pages 子路径） |
-| 测试 | Vitest 4.x | 76 个单元测试，3 个测试文件 |
-| 数据校验 | 自研校验脚本 | 110 项数据完整性检查 |
+| 测试 | Vitest 4.x | 单元测试 + 数据完整性校验（用例数量以 `npm run test` 实际输出为准，文档不维护具体数字） |
+| 数据校验 | 自研校验脚本 | 区域 / 逆变器 / 线缆 / 专项配置四类完整性检查 |
 | 数据转换 | xlsx (SheetJS) | 仅用于 `npm run convert` 脚本，构建时不参与 |
 | 拼音 | pinyin-pro 3.27.0 | 通过 jsDelivr CDN 引入（非 npm 依赖），见 `src/index.html` |
 | 部署 | GitHub Actions + GitHub Pages | 推送 `main` 自动构建部署 |
@@ -152,13 +152,13 @@ npm run preview
 │               └── constants.js     ← 共享常量（湖南省标识、容配比挡位与选项）
 ├── scripts/
 │   ├── convert-all.js            ← Excel → region-data.js 转换脚本
-│   ├── validate-data.js          ← 数据完整性验证（110 项检查）
+│   ├── validate-data.js          ← 数据完整性验证
 │   └── shared/
 │       └── load-module.js        ← VM 沙箱加载共享模块（供脚本复用数据文件）
 ├── tests/
-│   ├── matching.test.js          ← 匹配逻辑单元测试（52 项）
-│   ├── data-changes.test.js      ← 数据变更回归测试（22 项）
-│   ├── inverter-correction.test.js ← 配置表修正回归测试（2 项）
+│   ├── matching.test.js          ← 匹配逻辑单元测试
+│   ├── data-changes.test.js      ← 数据变更回归测试
+│   ├── inverter-correction.test.js ← 配置表修正回归测试
 │   └── helpers/
 │       └── load-app.js           ← 测试辅助模块
 ├── docs/
@@ -185,27 +185,29 @@ npm run preview
 | `npm run dev` | 启动 Vite 开发服务器（热更新，端口 3000） |
 | `npm run build` | 数据校验 + 生产构建 → 输出 `dist/` |
 | `npm run preview` | 本地预览 `dist/` 构建产物 |
-| `npm run test` | 运行 76 个单元测试（`vitest run`，单次执行） |
+| `npm run test` | 运行全部单元测试（`vitest run`，单次执行） |
 | `npm run test:watch` | 监听模式运行测试 |
-| `npm run validate` | 运行 110 项数据完整性检查 |
+| `npm run validate` | 运行数据完整性检查 |
 | `npm run convert` | 从 Excel 重新生成区域容配比数据 |
 
 ## 测试说明
 
-### 单元测试（76 项，3 个文件）
+### 单元测试
 
-| 文件 | 数量 | 覆盖内容 |
-|------|------|---------|
-| `tests/matching.test.js` | 52 | 核心匹配逻辑（lookupMatch / lookupCable / 范围匹配 / 容配比映射） |
-| `tests/data-changes.test.js` | 22 | 数据变更回归（数据表结构与关键值快照） |
-| `tests/inverter-correction.test.js` | 2 | 配置表修正回归 |
+| 文件 | 覆盖内容 |
+|------|---------|
+| `tests/matching.test.js` | 核心匹配逻辑（lookupMatch / lookupCable / 范围匹配 / 容配比映射 / 数量范围） |
+| `tests/data-changes.test.js` | 数据变更回归（数据表结构与关键值快照） |
+| `tests/inverter-correction.test.js` | 配置表修正回归 |
+
+> 用例数量以 `npm run test` 的实际输出为准；新增 / 修改用例无需同步更新本文档。
 
 ```bash
 npm run test        # 全部运行（单次）
 npm run test:watch  # 监听模式
 ```
 
-### 数据完整性校验（110 项）
+### 数据完整性校验
 
 ```bash
 npm run validate
@@ -274,7 +276,7 @@ A：不能。它是 `npm run convert` 从 Excel 生成的产物，直接修改�
 A：超出建议表最大档（200kW）时工具会提示「超出建议表范围，需专项选型」，需联系交付人员处理，不得沿用最后一档。
 
 **Q：改了数据文件但构建被拦截？**
-A：`npm run build` 内置 110 项数据校验，测试或校验任一失败即中止。请按 [测试说明](#测试说明) 修复后重试。
+A：`npm run build` 内置数据完整性校验，测试或校验任一失败即中止。请按 [测试说明](#测试说明) 修复后重试。
 
 ## 文档索引
 

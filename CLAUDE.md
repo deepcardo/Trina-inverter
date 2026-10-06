@@ -20,8 +20,8 @@
 
 ```bash
 npm run dev       # 启动 Vite 开发服务器（热更新，端口 3000）
-npm run test      # 运行 76 个单元测试（推送前必跑）
-npm run validate  # 运行 110 项数据完整性检查（build 内置）
+npm run test      # 运行全部单元测试（推送前必跑）
+npm run validate  # 运行数据完整性检查（build 内置）
 npm run build     # 校验 + 生产构建 → dist/
 npm run convert   # 从 Excel 重新生成 region-data.js（勿手改生成物）
 npm run preview   # 预览构建产物
