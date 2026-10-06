@@ -19,8 +19,8 @@ npm run preview   # 预览构建产物
 ### 测试
 
 ```bash
-npm run test      # 运行 46 个单元测试
-npm run validate  # 运行数据完整性验证（91 项检查）
+npm run test      # 运行 76 个单元测试
+npm run validate  # 运行数据完整性验证（110 项检查）
 ```
 
 ### 数据更新
@@ -62,15 +62,16 @@ src/
 │           └── constants.js     ← 共享常量（版本号、数据源名称、系列枚举）
 scripts/
 ├── convert-all.js           ← Excel → region-data.js 转换脚本
-├── validate-data.js         ← 数据完整性验证（91 项检查）
+├── validate-data.js         ← 数据完整性验证（110 项检查）
 └── shared/
     └── load-module.js       ← VM 沙箱加载共享模块
 tests/
-├── matching.test.js         ← 46 个单元测试
+├── matching.test.js         ← 匹配逻辑单元测试
+├── data-changes.test.js     ← 数据变更回归测试
+├── inverter-correction.test.js ← 配置表修正回归测试
 └── helpers/
     └── load-app.js          ← 测试辅助模块
-data/                        ← Excel 源文件（版本管理）
-archived/                    ← 旧版 Excel 归档
+*.xlsx (根目录)              ← Excel 源文件（版本管理）
 dist/                        ← 构建产物（gitignore 已排除，不提交）
 ```
 

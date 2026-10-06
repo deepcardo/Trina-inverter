@@ -20,7 +20,7 @@
 
 - **前端**：原生 HTML/CSS/JavaScript，无框架依赖
 - **构建**：Vite 6.x
-- **测试**：Vitest（46 个单元测试）+ 数据完整性验证（91 项检查）
+- **测试**：Vitest（76 个单元测试）+ 数据完整性验证（110 项检查）
 - **数据**：Excel 源文件 → 自动转换脚本
 - **部署**：GitHub Actions 自动构建并发布到 GitHub Pages
 - **拼音**：pinyin-pro 3.x
@@ -28,9 +28,8 @@
 ## 项目结构
 
 ```
-├── index.html               ← 旧版离线备份（线上已切新版，不动）
 ├── src/
-│   ├── index.html           ← 新版入口（Vite root）
+│   ├── index.html           ← 入口（Vite root）
 │   ├── css/style.css        ← 样式（从 HTML 分离）
 │   └── public/js/
 │       ├── main.js           ← 入口：DOM 缓存、事件绑定、初始化
@@ -49,11 +48,12 @@
 │   └── shared/
 │       └── load-module.js    ← VM 沙箱加载共享模块
 ├── tests/
-│   ├── matching.test.js      ← 46 个单元测试
+│   ├── matching.test.js         ← 匹配逻辑单元测试
+│   ├── data-changes.test.js     ← 数据变更回归测试
+│   ├── inverter-correction.test.js ← 配置表修正回归测试
 │   └── helpers/
 │       └── load-app.js       ← 测试辅助
-├── data/                     ← Excel 源文件根目录
-├── archived/                 ← 旧版 Excel 归档
+├── *.xlsx                    ← Excel 源文件（根目录，版本管理）
 ├── docs/
 │   ├── adrs/                 ← 架构决策记录 (ADR-001 ~ 003)
 │   ├── specs/                ← 需求规格文档
@@ -70,8 +70,8 @@
 ```bash
 npm run dev       # 启动开发服务器（热更新）
 npm run build     # 生产构建（自动运行数据验证）
-npm run test      # 运行 46 个单元测试
-npm run validate  # 运行 91 项数据完整性检查
+npm run test      # 运行 76 个单元测试
+npm run validate  # 运行 110 项数据完整性检查
 npm run convert   # 从 Excel 重新生成区域容配比数据
 npm run preview   # 预览构建产物
 ```
@@ -81,7 +81,7 @@ npm run preview   # 预览构建产物
 1. 选择省份、城市、区县（支持拼音搜索）
 2. 容配比根据地区政策自动锁定
 3. 选择组件系列
-4. 输入组件数量（10-330 片）
+4. 输入组件数量（合法范围随组件系列与容配比动态提示，选择地区/系列后输入框会显示范围）
 5. 点击"智能匹配查询"获取结果，或修改数量/系列自动触发查询
 
 ## 数据维护
@@ -100,18 +100,10 @@ npm run preview   # 预览构建产物
 推送到 `main` 分支后，GitHub Actions 自动执行：
 
 ```
-npm test → npm run validate → npm run build → deploy-pages
+npm test → npm run build（内含 validate 数据验证）→ deploy-pages
 ```
 
 任一环节失败，部署自动中止，线上不受影响。
-
-## 回退
-
-```
-GitHub 仓库 → Settings → Pages → Source 改回 "Deploy from a branch → main → /"
-```
-
-根目录保留旧版 `index.html`，一切回即可恢复。
 
 ## 技术规范
 

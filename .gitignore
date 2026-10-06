@@ -3,3 +3,8 @@ dist/
 __pycache__/
 ~$*
 *.pyc
+
+# 本地工具目录
+.codegraph/
+.omo/
+.workbuddy/
