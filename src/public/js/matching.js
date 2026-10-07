@@ -30,6 +30,8 @@ function getHunanDbs(state) {
 }
 
 // 从实际配置表读取范围，避免页面提示与数据脱节。
+// 注意：此处返回的是各表区间的 min/max 并集，前提是挡位连续无缺口（scripts/validate-data.js 有专项检查兜底）。
+// 若未来允许挡位表出现缺口，需改为逐行判断，否则缺口内的数量会通过校验但查询时才报「未找到匹配项」。
 function getCountRange(state) {
   const rows = [...(DB[state.series]?.[state.ratio] || [])];
   if (!rows.length) return null;

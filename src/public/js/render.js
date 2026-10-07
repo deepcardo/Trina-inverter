@@ -38,10 +38,11 @@ function renderResult(match, state) {
   const isSmallPower = invPowers.length === 1 && (invPowers[0] === 8 || invPowers[0] === 10);
 
   if (isSmallPower) {
+    const small = SMALL_POWER_DISPLAY;
     $.resInv.textContent = `${invPowers[0]}kW单相 / ${invPowers[0]}kW三相`;
-    $.resBox.textContent = '10kW单相，25kW三相';
-    $.resCu.innerHTML = '<span class="cable-line">单相：3×10 mm²</span><span class="cable-line">三相：3×10+2×6 mm²</span>';
-    $.resAl.innerHTML = '<span class="cable-line">单相：2×16 mm²</span><span class="cable-line">三相：3×16+1×10 mm²</span>';
+    $.resBox.textContent = small.box;
+    $.resCu.innerHTML = small.cu.map(l => `<span class="cable-line">${l}</span>`).join('');
+    $.resAl.innerHTML = small.al.map(l => `<span class="cable-line">${l}</span>`).join('');
   } else {
     let cuHtml = '';
     for (let i = 0; i < invPowers.length; i++) {
