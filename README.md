@@ -123,22 +123,24 @@ npm run preview
 
 | 类别 | 技术 | 说明 |
 |------|------|------|
-| 前端 | 原生 HTML / CSS / JavaScript | 无框架依赖，无运行时 npm 依赖 |
+| 前端 | 原生 HTML / CSS / JavaScript | 无框架依赖，唯一运行时依赖 pinyin-pro 以本地文件方式打包 |
 | 构建 | Vite 6.x | `root: 'src'`，产物输出 `dist/`，`base: './'` 相对路径（适配 GitHub Pages 子路径） |
 | 测试 | Vitest 4.x | 单元测试 + 数据完整性校验（用例数量以 `npm run test` 实际输出为准，文档不维护具体数字） |
 | 数据校验 | 自研校验脚本 | 区域 / 逆变器 / 线缆 / 专项配置四类完整性检查 |
 | 数据转换 | xlsx (SheetJS) | 仅用于 `npm run convert` 脚本，构建时不参与 |
-| 拼音 | pinyin-pro 3.27.0 | 通过 jsDelivr CDN 引入（非 npm 依赖），见 `src/index.html` |
+| 拼音 | pinyin-pro 3.27.0 | 本地打包于 `src/public/vendor/`，随构建产物分发（无 CDN 依赖，避免 jsDelivr 不可达时拼音搜索失效） |
 | 部署 | GitHub Actions + GitHub Pages | 推送 `main` 自动构建部署 |
 
 ## 项目结构
 
 ```
 ├── src/                          ← Vite root
-│   ├── index.html                ← 入口 HTML（引入 CDN 与各 JS 模块）
+│   ├── index.html                ← 入口 HTML（引入本地拼音库与各 JS 模块）
 │   ├── css/
 │   │   └── style.css             ← 全部样式（从 HTML 内联分离）
 │   └── public/                   ← Vite public 目录，原样复制到 dist
+│       ├── vendor/
+│       │   └── pinyin-pro-3.27.0.min.js   ← 拼音库本地副本（随 npm 依赖同步更新）
 │       └── js/
 │           ├── main.js           ← 应用入口：DOM 缓存、事件绑定、输入校验、初始化
 │           ├── search.js         ← 搜索 + 拼音匹配 + 三级联动 + 最近使用
@@ -274,6 +276,9 @@ A：不能。它是 `npm run convert` 从 Excel 生成的产物，直接修改�
 
 **Q：线缆功率超出建议表怎么办？**
 A：超出建议表最大档（200kW）时工具会提示「超出建议表范围，需专项选型」，需联系交付人员处理，不得沿用最后一档。
+
+**Q：拼音搜索组件是怎么加载的？如何升级？**
+A：pinyin-pro 以本地文件打包在 `src/public/vendor/`，与站点同源加载，不依赖公共 CDN（jsDelivr 在部分网络环境不可达，会导致拼音搜索静默失效）。升级流程：`npm i pinyin-pro@<新版本>` → 用 `node_modules/pinyin-pro/dist/index.js` 覆盖 `src/public/vendor/pinyin-pro-3.27.0.min.js`（文件名含版本号，需同步更新 `src/index.html` 的引用与本行说明）→ `npm run test && npm run build`。若运行时检测到组件加载失败，搜索框下方会显示降级提示，此时仍可用中文搜索与级联选择。
 
 **Q：改了数据文件但构建被拦截？**
 A：`npm run build` 内置数据完整性校验，测试或校验任一失败即中止。请按 [测试说明](#测试说明) 修复后重试。

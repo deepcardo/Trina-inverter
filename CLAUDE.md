@@ -39,17 +39,19 @@ npm run preview   # 预览构建产物
 src/
 ├── index.html               ← 视图入口（副标题日期在此维护）
 ├── css/style.css            ← 样式
-└── public/js/
-    ├── main.js              ← 应用入口：事件绑定、输入校验、模块协调
-    ├── search.js            ← 搜索 + 拼音匹配 + 级联联动 + 最近使用
-    ├── matching.js          ← 核心匹配逻辑（纯数据，无 DOM 依赖）
-    ├── render.js            ← 结果渲染 + 施工规范 + 复制
-    └── data/
-        ├── region-data.js   ← 区域容配比数据（convert 生成，勿手改）
-        ├── inverters.js     ← 逆变器配置表 DB（手动维护）
-        ├── hunan.js         ← 湖南/张家界专项（手动维护）
-        ├── cables.js        ← 线缆规格表（手动维护）
-        └── constants.js     ← 共享常量（湖南省标识、容配比挡位与选项）
+└── public/
+    ├── vendor/              ← pinyin-pro 本地副本（勿引 CDN，升级流程见 README §常见问题）
+    └── js/
+        ├── main.js          ← 应用入口：事件绑定、输入校验、模块协调
+        ├── search.js        ← 搜索 + 拼音匹配 + 级联联动 + 最近使用
+        ├── matching.js      ← 核心匹配逻辑（纯数据，无 DOM 依赖）
+        ├── render.js        ← 结果渲染 + 施工规范 + 复制
+        └── data/
+            ├── region-data.js   ← 区域容配比数据（convert 生成，勿手改）
+            ├── inverters.js     ← 逆变器配置表 DB + 小功率展示（手动维护）
+            ├── hunan.js         ← 湖南/张家界专项（手动维护）
+            ├── cables.js        ← 线缆规格表（手动维护）
+            └── constants.js     ← 共享常量（湖南省标识、容配比挡位与选项）
 scripts/                     ← convert-all.js / validate-data.js / shared/
 tests/                       ← matching / data-changes / inverter-correction
 dist/                        ← 构建产物（gitignore 排除，勿提交、勿手改）
