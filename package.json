@@ -14,5 +14,8 @@
     "vite": "^6.3.0",
     "vitest": "^4.1.10",
     "xlsx": "^0.18.5"
+  },
+  "dependencies": {
+    "pinyin-pro": "3.27.0"
   }
 }
