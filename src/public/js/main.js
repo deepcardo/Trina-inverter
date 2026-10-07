@@ -8,7 +8,6 @@
 // ================= 从 REGION_DB 构建索引 =================
 const PROVINCE_CITY_DISTRICT = {};
 const SEARCH_INDEX = [];
-const CITY_DEFAULT_SET = new Set();
 
 if (typeof REGION_DB !== 'undefined' && REGION_DB) {
   Object.keys(REGION_DB).forEach(k => {
@@ -16,9 +15,6 @@ if (typeof REGION_DB !== 'undefined' && REGION_DB) {
     if (!PROVINCE_CITY_DISTRICT[p]) PROVINCE_CITY_DISTRICT[p] = {};
     if (!PROVINCE_CITY_DISTRICT[p][c]) PROVINCE_CITY_DISTRICT[p][c] = [];
     if (!PROVINCE_CITY_DISTRICT[p][c].includes(d)) PROVINCE_CITY_DISTRICT[p][c].push(d);
-    if (d === c || d === '市辖区') {
-      CITY_DEFAULT_SET.add(k);
-    }
     SEARCH_INDEX.push({ areaKey: k, province: p, city: c, district: d, fullName: p + c + d });
   });
 }
@@ -102,6 +98,11 @@ function handleQuery() {
     if (!state.city) markError($.city);
     if (!state.district) markError($.district);
     showError('⚠️ 请选择完整的地区（省/市/区县）');
+    // 错误指向的级联选择器可能仍处于折叠状态，自动展开并把视线带到修复入口
+    if (!$.cascadingWrap.classList.contains('visible')) {
+      setCascadeVisible(true);
+      $.cascadingWrap.scrollIntoView({ block: 'nearest' });
+    }
     hasErr = true;
   }
   if (!state.count || !isValidCount(state.count, state)) {
@@ -129,8 +130,7 @@ function handleCountBlur() {
   const val = Number($.count.value);
   if ($.count.value && !isValidCount(val, getInputState())) {
     markError($.count);
-    $.msgText.textContent = countRangeMessage();
-    $.msgBox.classList.add('msg-visible');
+    showError(countRangeMessage());
   } else {
     clearMarkError($.count);
     hideError();
@@ -173,7 +173,6 @@ function setupSearch() {
     const q = this.value.trim();
     if (q) {
       $.searchClear.style.display = 'block';
-      $.recentSection.style.display = 'none';
       clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {
         const results = searchDistricts(q);
@@ -198,11 +197,11 @@ function setupSearch() {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       searchActiveIdx = Math.min(searchActiveIdx + 1, items.length - 1);
-      items.forEach((el, i) => el.classList.toggle('active', i === searchActiveIdx));
+      syncSearchActiveAria(items);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       searchActiveIdx = Math.max(searchActiveIdx - 1, -1);
-      items.forEach((el, i) => el.classList.toggle('active', i === searchActiveIdx));
+      syncSearchActiveAria(items);
     } else if (e.key === 'Enter' && searchActiveIdx >= 0 && items[searchActiveIdx]) {
       e.preventDefault();
       items[searchActiveIdx].click();
@@ -221,13 +220,32 @@ function setupSearch() {
   });
 }
 
+// 同步方向键高亮项的 ARIA 状态（屏幕阅读器跟随）
+function syncSearchActiveAria(items) {
+  items.forEach((el, i) => {
+    const active = i === searchActiveIdx;
+    el.classList.toggle('active', active);
+    el.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  if (searchActiveIdx >= 0 && items[searchActiveIdx]) {
+    $.searchInput.setAttribute('aria-activedescendant', items[searchActiveIdx].id);
+  } else {
+    $.searchInput.removeAttribute('aria-activedescendant');
+  }
+}
+
+// 展开/收起级联选择器（入口按钮与错误自动展开共用，保证箭头与文案同步）
+function setCascadeVisible(visible) {
+  $.cascadingWrap.classList.toggle('visible', visible);
+  $.expandLink.classList.toggle('expanded', visible);
+  $.expandLink.innerHTML = visible
+    ? '收起地区选择 <span class="expand-arrow"></span>'
+    : '展开地区选择 <span class="expand-arrow"></span>';
+}
+
 function setupMisc() {
   $.expandLink.addEventListener('click', function () {
-    const isVisible = $.cascadingWrap.classList.toggle('visible');
-    this.classList.toggle('expanded');
-    this.innerHTML = isVisible
-      ? '收起地区选择 <span class="expand-arrow"></span>'
-      : '展开地区选择 <span class="expand-arrow"></span>';
+    setCascadeVisible(!$.cascadingWrap.classList.contains('visible'));
   });
   $.recentClear.addEventListener('click', clearRecentAll);
   $.recentList.addEventListener('click', function (e) {
@@ -246,7 +264,8 @@ function setupMisc() {
 
 function setupActions() {
   $.queryBtn.addEventListener('click', handleQuery);
-  $.copyBtn.addEventListener('pointerdown', handleCopy);
+  // 用 click 而非 pointerdown：保证键盘 Enter/Space 可触发，且按下后仍可反悔（不误触）
+  $.copyBtn.addEventListener('click', handleCopy);
   $.msgClose.addEventListener('click', () => { hideError(); clearFormErrors(); });
   $.count.addEventListener('keypress', e => { if (e.key === 'Enter') handleQuery(); });
   $.count.addEventListener('blur', handleCountBlur);
@@ -292,6 +311,10 @@ function init() {
   setupMisc();
   setupActions();
   if (typeof REGION_DB === 'undefined' || !REGION_DB) showDataLoadError();
+  if (typeof pinyinPro === 'undefined' || !pinyinPro.match) {
+    const notice = document.getElementById('pinyinNotice');
+    if (notice) notice.hidden = false;
+  }
   handleCascade('init');
   showRecentIfAvailable();
 }

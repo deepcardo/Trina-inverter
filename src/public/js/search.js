@@ -103,15 +103,22 @@ function highlightText(text, query) {
 function renderSearchResults(results, q) {
   $.searchResults.innerHTML = '';
   searchActiveIdx = -1;
+  $.searchInput.removeAttribute('aria-activedescendant');
   if (!results || results.length === 0) {
-    $.searchResults.innerHTML = '<div class="sd-empty">未找到匹配地区，请展开地区选择</div>';
-    $.searchResults.classList.add('sd-visible');
+    $.searchResults.removeAttribute('role');
+    $.searchResults.innerHTML = '<div class="sd-empty" role="status">未找到匹配地区，请展开地区选择</div>';
+    openSearchDropdown();
     return;
   }
+  $.searchResults.setAttribute('role', 'listbox');
+  $.searchResults.setAttribute('aria-label', '搜索结果');
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
     const el = document.createElement('div');
     el.className = 'sd-item';
+    el.id = 'sd-opt-' + i;
+    el.setAttribute('role', 'option');
+    el.setAttribute('aria-selected', 'false');
     const parts = [r.entry.province, r.entry.city, r.entry.district];
     let html = '';
     if (!r.isPinyin) {
@@ -139,12 +146,19 @@ function renderSearchResults(results, q) {
     el.addEventListener('click', () => selectDistrict(r.entry.areaKey));
     $.searchResults.appendChild(el);
   }
+  openSearchDropdown();
+}
+
+function openSearchDropdown() {
   $.searchResults.classList.add('sd-visible');
+  $.searchInput.setAttribute('aria-expanded', 'true');
 }
 
 function closeSearchDropdown() {
   $.searchResults.classList.remove('sd-visible');
   searchActiveIdx = -1;
+  $.searchInput.setAttribute('aria-expanded', 'false');
+  $.searchInput.removeAttribute('aria-activedescendant');
 }
 
 // ================= 地区选择（三路同步核心） =================
@@ -196,10 +210,10 @@ function clearRecentAll() {
 }
 
 function showRecentIfAvailable() {
-  if ($.searchInput.value) { $.recentSection.style.display = 'none'; return; }
   try {
     const recent = getRecent();
     if (recent.length === 0) { $.recentSection.style.display = 'none'; return; }
+    // 有历史即常显（含搜索框有值时），提升功能可发现性
     $.recentSection.style.display = 'block';
     $.recentList.innerHTML = '';
     for (let i = 0; i < recent.length; i++) {
@@ -208,7 +222,7 @@ function showRecentIfAvailable() {
       const el = document.createElement('span');
       el.className = 'recent-item';
       el.dataset.areaKey = item.areaKey;
-      el.innerHTML = '<span>' + escapeHtml(label) + '</span><span class="ri-del" data-key="' + escapeHtml(item.areaKey) + '">×</span>';
+      el.innerHTML = '<span>' + escapeHtml(label) + '</span><button type="button" class="ri-del" data-key="' + escapeHtml(item.areaKey) + '" aria-label="删除' + escapeHtml(label) + '">×</button>';
       $.recentList.appendChild(el);
     }
   } catch (e) { $.recentSection.style.display = 'none'; }
@@ -219,6 +233,9 @@ function handleCascade(lv, presetP, presetC, presetD) {
   const p = presetP || $.province.value;
   const c = presetC || (lv === 'province' ? '' : $.city.value);
   hideResult();
+
+  // 记住用户已选的系列：重建选项后若仍可用则恢复，避免换区县时被静默重置
+  const prevSeries = $.series.value;
 
   if (presetP) $.province.value = presetP;
 
@@ -241,6 +258,7 @@ function handleCascade(lv, presetP, presetC, presetD) {
     $.series.innerHTML = '<option value="NEG21_715">NEG21 (715W~720W)</option><option value="NEG21_730">NEG21 (730W~740W)</option><option value="NEG22_785">NEG22 (780W~785W)</option><option value="NEG22_800">NEG22 (790W~800W)</option>';
   }
   if ($.series.options.length > 0 && $.series.options[0].value) $.series.value = $.series.options[0].value;
+  if (prevSeries && Array.from($.series.options).some(o => o.value === prevSeries)) $.series.value = prevSeries;
 
   if (presetD) $.district.value = presetD;
   updateCountRange();
@@ -278,6 +296,10 @@ function resetSearchState() {
   handleCascade('province');
   $.city.value = '';
   $.district.value = '';
+  // 地区已清空，数量一并复位，避免留下「有数量无地区」的中间态
+  $.count.value = '';
+  clearMarkError($.count);
+  hideError();
   $.ratio.dataset.value = RATIO_NORMAL;
   const defaultLabel = RATIO_OPTIONS.find(o => o.value === RATIO_NORMAL)?.label || RATIO_NORMAL;
   $.ratio.querySelector('.ratio-value').textContent = defaultLabel;
